@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!--
+        Chain link icon: two interlocked pill-shaped rings.
+        White ring (upper-right) + Orange ring (lower-left).
+        Interlocking achieved by clip-based layering:
+          1. Orange ring upper-right half → behind white ring
+          2. White ring full
+          3. Orange ring lower-left half → in front of white ring
+        Clip line: diagonal y = x (upper-right half: y<x, lower-left half: y>x)
+    -->
+
+    <!-- 1. Orange ring upper-right portion (behind white) -->
+    <group>
+        <clip-path android:pathData="M 0,0 L 108,0 L 108,108 Z"/>
+        <group
+            android:translateX="44"
+            android:translateY="64"
+            android:pivotX="0"
+            android:pivotY="0"
+            android:rotation="-45">
+            <path
+                android:fillColor="#FF6B35"
+                android:fillType="evenOdd"
+                android:pathData="M -7,-13 L 7,-13 A 13 13 0 0 1 7 13 L -7,13 A 13 13 0 0 1 -7,-13 Z
+                                  M -7,-6 L 7,-6 A 6 6 0 0 1 7 6 L -7,6 A 6 6 0 0 1 -7,-6 Z"/>
+        </group>
+    </group>
+
+    <!-- 2. White ring (complete, upper-right position) -->
+    <group
+        android:translateX="64"
+        android:translateY="44"
+        android:pivotX="0"
+        android:pivotY="0"
+        android:rotation="-45">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M -7,-13 L 7,-13 A 13 13 0 0 1 7 13 L -7,13 A 13 13 0 0 1 -7,-13 Z
+                              M -7,-6 L 7,-6 A 6 6 0 0 1 7 6 L -7,6 A 6 6 0 0 1 -7,-6 Z"/>
+    </group>
+
+    <!-- 3. Orange ring lower-left portion (in front of white) -->
+    <group>
+        <clip-path android:pathData="M 0,0 L 0,108 L 108,108 Z"/>
+        <group
+            android:translateX="44"
+            android:translateY="64"
+            android:pivotX="0"
+            android:pivotY="0"
+            android:rotation="-45">
+            <path
+                android:fillColor="#FF6B35"
+                android:fillType="evenOdd"
+                android:pathData="M -7,-13 L 7,-13 A 13 13 0 0 1 7 13 L -7,13 A 13 13 0 0 1 -7,-13 Z
+                                  M -7,-6 L 7,-6 A 6 6 0 0 1 7 6 L -7,6 A 6 6 0 0 1 -7,-6 Z"/>
+        </group>
+    </group>
+
+</vector>

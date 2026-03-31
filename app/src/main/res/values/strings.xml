@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">Linky Run</string>
+    <string name="difficulty_easy">쉬움</string>
+    <string name="difficulty_medium">보통</string>
+    <string name="difficulty_hard">어려움</string>
+    <string name="difficulty_very_hard">매우 어려움</string>
+    <string name="btn_daily">오늘의 게임</string>
+    <string name="btn_ranking">랭킹</string>
+    <string name="loading">불러오는 중…</string>
+    <string name="goal_label">목표</string>
+    <string name="hops_label">이동</string>
+    <string name="btn_giveup">포기</string>
+    <string name="giveup_title">게임을 포기할까요?</string>
+    <string name="giveup_confirm">포기</string>
+    <string name="giveup_cancel">계속하기</string>
+    <string name="victory_title">도착!</string>
+    <string name="victory_time">시간</string>
+    <string name="victory_hops">이동 횟수</string>
+    <string name="btn_play_again">다시 하기</string>
+    <string name="btn_home">홈으로</string>
+    <string name="error_load">게임을 불러오지 못했습니다</string>
+    <string name="btn_submit_rank">랭킹 등록</string>
+    <string name="hint_nickname">닉네임 입력</string>
+</resources>

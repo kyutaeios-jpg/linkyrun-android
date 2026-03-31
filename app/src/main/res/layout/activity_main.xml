@@ -1,0 +1,721 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ads="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- ══ Screen 0: 인트로 ══ -->
+    <LinearLayout
+        android:id="@+id/screenIntro"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <!-- 히어로: 화면의 28% — LinearLayout + 균등 spacer로 타이틀 정중앙 배치 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.4"
+            android:minHeight="90dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_hero">
+
+            <!-- ? 버튼: 좌상단 고정 -->
+            <Button
+                android:id="@+id/btnInfo"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="start"
+                android:layout_marginTop="6dp"
+                android:layout_marginStart="6dp"
+                android:text="?"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#88FFFFFF"
+                android:paddingLeft="0dp"
+                android:paddingRight="0dp" />
+
+            <!-- 상단 여백 (타이틀을 중앙으로 밀어올림) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- 게임명 타이틀 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔗"
+                    android:textSize="36sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Linky Run"
+                    android:textSize="30sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text"
+                    android:letterSpacing="0.03"
+                    android:layout_marginTop="2dp" />
+
+                <TextView
+                    android:id="@+id/tvSubtitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="링크를 타고 목표 페이지까지 달려가세요"
+                    android:textSize="13sp"
+                    android:textColor="@color/muted"
+                    android:layout_marginTop="5dp"
+                    android:gravity="center" />
+            </LinearLayout>
+
+            <!-- 하단 여백 (상단과 동일 weight → 타이틀이 버튼 아래 공간의 정중앙) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- 컨텐츠: 화면의 72%. 내부 spacer가 여백 흡수 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3.6"
+            android:orientation="vertical"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="58dp">
+
+            <!-- 챌린지 배너 (기본 gone) -->
+            <LinearLayout
+                android:id="@+id/challengeBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_challenge_banner"
+                android:padding="12dp"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvChallengeTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🔥 친구의 도전장!"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text"
+                    android:layout_marginBottom="2dp" />
+
+                <TextView
+                    android:id="@+id/tvChallengeDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted"
+                    android:layout_marginBottom="8dp" />
+
+                <Button
+                    android:id="@+id/btnChallengeAccept"
+                    android:layout_width="match_parent"
+                    android:layout_height="44dp"
+                    android:text="도전 수락 ▶"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:backgroundTint="@color/primary" />
+            </LinearLayout>
+
+            <!-- 여백 흡수용 spacer (기기 높이에 따라 자동 조정) -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- 데일리 카드(좌 50%) + 언어선택(우 50%) 행 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="90dp"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <!-- 좌: 데일리 카드 컨테이너 (항상 50% 차지) -->
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="5dp"
+                    android:background="@drawable/bg_card">
+
+                    <LinearLayout
+                        android:id="@+id/dailyCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_daily_card"
+                        android:paddingLeft="14dp"
+                        android:paddingRight="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="10dp"
+                        android:gravity="center_vertical"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:visibility="gone">
+
+                        <!-- 1줄: 배지 + Day N -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="5dp">
+
+                            <TextView
+                                android:id="@+id/tvDailyBadge"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="📅 오늘의 챌린지"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/primary" />
+
+                            <TextView
+                                android:id="@+id/tvDailyNum"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textSize="11sp"
+                                android:textColor="@color/muted" />
+                        </LinearLayout>
+
+                        <!-- 2줄: 시작 페이지 -->
+                        <TextView
+                            android:id="@+id/tvDailyStart"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/accent"
+                            android:maxLines="1"
+                            android:ellipsize="end"
+                            android:layout_marginBottom="3dp" />
+
+                        <!-- 3줄: → 목표 페이지 ▶ -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="→ "
+                                android:textSize="12sp"
+                                android:textColor="@color/muted" />
+
+                            <TextView
+                                android:id="@+id/tvDailyGoal"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:textSize="14sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/primary"
+                                android:maxLines="1"
+                                android:ellipsize="end" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="  ▶"
+                                android:textSize="13sp"
+                                android:textColor="@color/primary" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </FrameLayout>
+
+                <!-- 우: 언어 선택 카드 (50% 차지, 데일리와 동일한 카드 스타일) -->
+                <LinearLayout
+                    android:id="@+id/btnLang"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="5dp"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp"
+                    android:gravity="center_vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tvLangSettingTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🌐 언어 설정"
+                        android:textSize="11sp"
+                        android:textColor="@color/muted"
+                        android:layout_marginBottom="5dp" />
+
+                    <TextView
+                        android:id="@+id/tvLangLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="🇰🇷 나무위키"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text"
+                        android:maxLines="1"
+                        android:ellipsize="end"
+                        android:layout_marginBottom="3dp" />
+
+                    <TextView
+                        android:id="@+id/tvLangSettingHint"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="탭하여 변경 →"
+                        android:textSize="11sp"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 게임 시작 버튼 -->
+            <Button
+                android:id="@+id/btnGoStart"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="게임 시작하기  ▶"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/primary"
+                android:gravity="center"
+                android:layout_marginBottom="10dp" />
+
+            <!-- 내 기록 + 랭킹 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <Button
+                    android:id="@+id/btnStats"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="5dp"
+                    android:text="내 기록  📊"
+                    android:textSize="14sp"
+                    android:textColor="@color/text"
+                    android:gravity="center"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:strokeColor="@color/border" />
+
+                <Button
+                    android:id="@+id/btnRanking"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="5dp"
+                    android:text="랭킹  🏆"
+                    android:textSize="14sp"
+                    android:textColor="@color/text"
+                    android:gravity="center"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:strokeColor="@color/border" />
+            </LinearLayout>
+
+            <!-- 게임 방법: 컨텐츠 크기만큼만 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:id="@+id/tvHowToPlay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="게임 방법"
+                    android:textSize="11sp"
+                    android:textColor="@color/muted"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.1"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView android:id="@+id/tvRule1"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="1. 난이도 선택 → 시작·목표 페이지 자동 배정"
+                    android:textSize="13sp" android:textColor="@color/text"
+                    android:layout_marginBottom="5dp" />
+                <TextView android:id="@+id/tvRule2"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="2. 내부 링크만 클릭해서 목표 페이지까지 이동"
+                    android:textSize="13sp" android:textColor="@color/text"
+                    android:layout_marginBottom="5dp" />
+                <TextView android:id="@+id/tvRule3"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="3. 최단 시간 · 최소 클릭으로 도달하면 승리!"
+                    android:textSize="13sp" android:textColor="@color/text"
+                    android:layout_marginBottom="5dp" />
+                <TextView android:id="@+id/tvRule4"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="4. 뒤로 가기 · 검색 · 외부 링크 사용 금지"
+                    android:textSize="13sp" android:textColor="@color/text" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ══ Screen 1: 난이도 선택 ══ -->
+    <LinearLayout
+        android:id="@+id/screenDifficulty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/bg_dark"
+        android:visibility="gone">
+
+        <!-- 상단 바 -->
+        <LinearLayout
+            android:id="@+id/diffTopBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingLeft="8dp"
+            android:paddingRight="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <Button
+                android:id="@+id/btnDiffBack"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:text="← 뒤로"
+                android:textSize="14sp"
+                android:textColor="@color/muted"
+                style="@style/Widget.Material3.Button.TextButton" />
+
+            <TextView
+                android:id="@+id/tvDiffTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="난이도 선택"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/text"
+                android:gravity="center" />
+
+            <View android:layout_width="64dp" android:layout_height="1dp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingBottom="56dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- 선택된 위키 표시 -->
+                <TextView
+                    android:id="@+id/tvSelectedWiki"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="나무위키"
+                    android:textSize="12sp"
+                    android:textColor="@color/muted"
+                    android:gravity="center"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- 난이도 카드 4개 -->
+                <LinearLayout
+                    android:id="@+id/diffEasy"
+                    android:layout_width="match_parent"
+                    android:layout_height="88dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_diff_card"
+                    android:padding="20dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🟢" android:textSize="28sp" android:layout_marginEnd="16dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/tvDiffEasyName"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="쉬움" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/text" />
+                        <TextView android:id="@+id/tvDiffEasyDesc"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="역링크 500개 이상" android:textSize="12sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="▶" android:textSize="14sp" android:textColor="@color/muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/diffMedium"
+                    android:layout_width="match_parent"
+                    android:layout_height="88dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_diff_card"
+                    android:padding="20dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🟡" android:textSize="28sp" android:layout_marginEnd="16dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/tvDiffMediumName"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="보통" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/text" />
+                        <TextView android:id="@+id/tvDiffMediumDesc"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="역링크 120개 이상" android:textSize="12sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="▶" android:textSize="14sp" android:textColor="@color/muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/diffHard"
+                    android:layout_width="match_parent"
+                    android:layout_height="88dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_diff_card"
+                    android:padding="20dp"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="🔴" android:textSize="28sp" android:layout_marginEnd="16dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/tvDiffHardName"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="어려움" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/text" />
+                        <TextView android:id="@+id/tvDiffHardDesc"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="역링크 40개 이상" android:textSize="12sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="▶" android:textSize="14sp" android:textColor="@color/muted" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/diffVeryHard"
+                    android:layout_width="match_parent"
+                    android:layout_height="88dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_diff_hard"
+                    android:padding="20dp">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="💀" android:textSize="28sp" android:layout_marginEnd="16dp" />
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/tvDiffVeryHardName"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="매우 어려움" android:textSize="17sp" android:textStyle="bold" android:textColor="@color/danger" />
+                        <TextView android:id="@+id/tvDiffVeryHardDesc"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="역링크 10개 이상" android:textSize="12sp" android:textColor="@color/muted" />
+                    </LinearLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="▶" android:textSize="14sp" android:textColor="@color/danger" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- ══ Screen 2: 랭킹 ══ -->
+    <LinearLayout
+        android:id="@+id/screenRanking"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@color/bg_dark"
+        android:visibility="gone">
+
+        <!-- 헤더 -->
+        <LinearLayout
+            android:id="@+id/rankingHeaderBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingLeft="4dp"
+            android:paddingRight="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+
+            <Button
+                android:id="@+id/btnRankingClose"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="48dp"
+                android:layout_height="44dp"
+                android:text="✕"
+                android:textSize="18sp"
+                android:textColor="@color/muted"
+                android:paddingLeft="0dp"
+                android:paddingRight="0dp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🏆 랭킹"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/text"
+                android:gravity="center" />
+
+            <View android:layout_width="48dp" android:layout_height="1dp" />
+        </LinearLayout>
+
+        <!-- 위키 탭 (동적으로 채움) -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="36dp"
+            android:scrollbars="none"
+            android:background="#10FFFFFF">
+            <LinearLayout
+                android:id="@+id/lbWikiTabs"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:gravity="center_vertical" />
+        </HorizontalScrollView>
+
+        <!-- 난이도 탭 -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:scrollbars="none">
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:gravity="center_vertical">
+
+                <Button android:id="@+id/lbTabDaily"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content" android:layout_height="44dp"
+                    android:text="📅 데일리" android:textSize="13sp"
+                    android:textColor="@color/primary" />
+                <Button android:id="@+id/lbTabEasy"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content" android:layout_height="44dp"
+                    android:text="🟢 쉬움" android:textSize="13sp"
+                    android:textColor="@color/muted" />
+                <Button android:id="@+id/lbTabMedium"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content" android:layout_height="44dp"
+                    android:text="🟡 보통" android:textSize="13sp"
+                    android:textColor="@color/muted" />
+                <Button android:id="@+id/lbTabHard"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content" android:layout_height="44dp"
+                    android:text="🔴 어려움" android:textSize="13sp"
+                    android:textColor="@color/muted" />
+                <Button android:id="@+id/lbTabVeryHard"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content" android:layout_height="44dp"
+                    android:text="💀 매우 어려움" android:textSize="13sp"
+                    android:textColor="@color/muted" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/border" />
+
+        <!-- 랭킹 목록 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingBottom="56dp">
+                <LinearLayout
+                    android:id="@+id/lbContent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingTop="6dp" />
+            </ScrollView>
+
+            <ProgressBar
+                android:id="@+id/lbLoading"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:indeterminateTint="@color/primary"
+                android:visibility="gone" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <!-- 로딩 오버레이 -->
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC070B14"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/primary" />
+    </FrameLayout>
+
+    <!-- 하단 배너 광고 (게임 화면 제외) -->
+    <com.google.android.gms.ads.AdView
+        android:id="@+id/adBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        ads:adSize="BANNER"
+        ads:adUnitId="ca-app-pub-4723026681968956/1531500323" />
+
+</FrameLayout>

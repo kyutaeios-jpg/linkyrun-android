@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <color name="bg_dark">#070B14</color>
+    <color name="bg_card">#0E1525</color>
+    <color name="bg_gradient_start">#1E3A5F</color>
+    <color name="bg_gradient_end">#0D1B3E</color>
+    <color name="primary">#FF6B35</color>
+    <color name="accent">#38BDF8</color>
+    <color name="text">#F0F4FF</color>
+    <color name="muted">#7B8FAD</color>
+    <color name="border">#1E2D45</color>
+    <color name="danger">#FF4D6D</color>
+    <color name="hud_bg">#F5070B14</color>
+    <color name="accent_dark">#2563EB</color>
+</resources>
