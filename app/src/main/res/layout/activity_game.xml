@@ -84,6 +84,7 @@
             android:padding="6dp">
 
             <TextView
+                android:id="@+id/tvGoalLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="목표 ▾"
@@ -119,6 +120,22 @@
             android:paddingLeft="14dp"
             android:paddingRight="14dp" />
     </LinearLayout>
+
+    <!-- 페이지 로딩 오버레이 -->
+    <FrameLayout
+        android:id="@+id/pageLoadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#88070B14"
+        android:visibility="gone"
+        android:elevation="6dp">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:indeterminateTint="@color/primary" />
+    </FrameLayout>
 
     <!-- 경로 패널 (기본 숨김) -->
     <HorizontalScrollView
@@ -158,7 +175,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp"
+                android:padding="12dp"
                 android:gravity="center_horizontal">
 
                 <LinearLayout
@@ -166,33 +183,26 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/bg_card"
-                    android:padding="24dp">
+                    android:padding="16dp">
 
-                    <!-- 아이콘 + 제목 -->
+                    <!-- 제목 -->
                     <TextView
+                        android:id="@+id/tvVictoryTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="🎉"
-                        android:textSize="48sp"
-                        android:gravity="center"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="도착!"
-                        android:textSize="24sp"
+                        android:text="🎉  도착!"
+                        android:textSize="20sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary"
                         android:gravity="center"
-                        android:layout_marginBottom="20dp" />
+                        android:layout_marginBottom="12dp" />
 
                     <!-- 통계 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginBottom="16dp">
+                        android:layout_marginBottom="10dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -200,11 +210,12 @@
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/bg_stat"
-                            android:padding="14dp"
+                            android:padding="10dp"
                             android:layout_marginEnd="6dp"
                             android:gravity="center">
 
                             <TextView
+                                android:id="@+id/tvVictoryTimeLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="시간"
@@ -217,7 +228,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="—"
-                                android:textSize="28sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/primary"
                                 android:fontFeatureSettings="tnum" />
@@ -229,11 +240,12 @@
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/bg_stat"
-                            android:padding="14dp"
+                            android:padding="10dp"
                             android:layout_marginStart="6dp"
                             android:gravity="center">
 
                             <TextView
+                                android:id="@+id/tvVictoryHopsLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="이동"
@@ -246,7 +258,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="—"
-                                android:textSize="28sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/accent" />
                         </LinearLayout>
@@ -254,22 +266,23 @@
 
                     <!-- 경로 -->
                     <TextView
+                        android:id="@+id/tvVictoryPathLabel"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="경로"
                         android:textSize="10sp"
                         android:textColor="@color/muted"
                         android:textAllCaps="true"
-                        android:layout_marginBottom="6dp" />
+                        android:layout_marginBottom="4dp" />
 
                     <TextView
                         android:id="@+id/tvVictoryPath"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textSize="13sp"
+                        android:textSize="12sp"
                         android:textColor="@color/text"
-                        android:lineSpacingMultiplier="1.7"
-                        android:layout_marginBottom="20dp" />
+                        android:lineSpacingMultiplier="1.4"
+                        android:layout_marginBottom="12dp" />
 
                     <!-- 랭킹 등록 (daily/custom 아닌 경우만) -->
                     <LinearLayout
@@ -277,39 +290,40 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:layout_marginBottom="16dp">
+                        android:layout_marginBottom="10dp">
 
                         <TextView
+                            android:id="@+id/tvRankTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="랭킹 등록"
-                            android:textSize="13sp"
+                            android:textSize="12sp"
                             android:textStyle="bold"
                             android:textColor="@color/text"
                             android:gravity="center"
                             android:layout_gravity="center"
-                            android:layout_marginBottom="10dp" />
+                            android:layout_marginBottom="6dp" />
 
                         <EditText
                             android:id="@+id/etNickname"
                             android:layout_width="match_parent"
-                            android:layout_height="50dp"
+                            android:layout_height="44dp"
                             android:hint="닉네임 입력"
                             android:textColor="@color/text"
                             android:textColorHint="@color/muted"
-                            android:textSize="15sp"
-                            android:layout_marginBottom="8dp"
+                            android:textSize="14sp"
+                            android:layout_marginBottom="6dp"
                             android:inputType="text"
                             android:maxLines="1"
-                            android:padding="12dp"
+                            android:padding="10dp"
                             android:background="@drawable/bg_input" />
 
                         <Button
                             android:id="@+id/btnSubmitRank"
                             android:layout_width="match_parent"
-                            android:layout_height="50dp"
+                            android:layout_height="44dp"
                             android:text="랭킹 등록"
-                            android:textSize="15sp"
+                            android:textSize="14sp"
                             android:textColor="@color/white"
                             android:backgroundTint="@color/primary" />
 
@@ -318,44 +332,44 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:textColor="@color/primary"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:textStyle="bold"
                             android:gravity="center"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="6dp"
                             android:visibility="gone" />
                     </LinearLayout>
 
-                    <!-- 액션 버튼들 -->
+                    <!-- 주요 액션: 다시하기 + 홈으로 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:layout_marginBottom="8dp">
+                        android:layout_marginBottom="6dp">
 
                         <Button
                             android:id="@+id/btnPlayAgain"
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="다시 하기"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:textColor="@color/white"
                             android:backgroundTint="@color/primary"
-                            android:layout_marginEnd="8dp" />
+                            android:layout_marginEnd="6dp" />
 
                         <Button
                             android:id="@+id/btnGoHome"
                             android:layout_width="0dp"
-                            android:layout_height="52dp"
+                            android:layout_height="44dp"
                             android:layout_weight="1"
                             android:text="홈으로"
-                            android:textSize="14sp"
+                            android:textSize="13sp"
                             android:textColor="@color/text"
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:strokeColor="@color/border" />
                     </LinearLayout>
 
-                    <!-- 공유 + 도전장 -->
+                    <!-- 보조 액션: 공유 + 도전장 + 페이지 읽기 -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -364,23 +378,35 @@
                         <Button
                             android:id="@+id/btnShare"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="40dp"
                             android:layout_weight="1"
                             android:text="공유"
-                            android:textSize="13sp"
+                            android:textSize="12sp"
                             android:textColor="@color/muted"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="4dp"
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:strokeColor="@color/border" />
 
                         <Button
                             android:id="@+id/btnChallenge"
                             android:layout_width="0dp"
-                            android:layout_height="48dp"
+                            android:layout_height="40dp"
                             android:layout_weight="1"
-                            android:text="도전장 보내기"
-                            android:textSize="13sp"
+                            android:text="도전장"
+                            android:textSize="12sp"
                             android:textColor="@color/muted"
+                            android:layout_marginEnd="4dp"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:strokeColor="@color/border" />
+
+                        <Button
+                            android:id="@+id/btnReadPage"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="📖 읽기"
+                            android:textSize="12sp"
+                            android:textColor="@color/accent"
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:strokeColor="@color/border" />
                     </LinearLayout>

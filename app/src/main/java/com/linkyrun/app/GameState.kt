@@ -5,7 +5,7 @@ data class GameState(
     val goal: String,
     val difficulty: String,
     val wiki: String = "namu",
-    val startTime: Long = System.currentTimeMillis(),
+    var startTime: Long = 0L,
     var hops: Int = 0,
     var path: MutableList<String> = mutableListOf(),
     var active: Boolean = true,

@@ -135,19 +135,32 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenIntro: View
     private lateinit var screenDiff: View
     private lateinit var screenRanking: View
+    private lateinit var screenStats: View
     private lateinit var lbWikiTabs: LinearLayout
     private lateinit var lbContent: LinearLayout
     private lateinit var lbLoading: View
+    private lateinit var statsWikiTabs: LinearLayout
+    private lateinit var statsContent: LinearLayout
 
     private var dailyInfo: ApiClient.GameInfo? = null
     private var pendingChallenge: ApiClient.GameInfo? = null
     private var currentLang = "namu"
     private var lbCurrentWiki = "namu"
     private var lbCurrentDiff = "easy"
+    private var statsCurrentWiki = "namu"
+    private var statsCurrentDiff = "all"
 
     private val DIFF_TAB_IDS = mapOf(
         "easy" to R.id.lbTabEasy, "medium" to R.id.lbTabMedium,
         "hard" to R.id.lbTabHard, "very_hard" to R.id.lbTabVeryHard, "daily" to R.id.lbTabDaily
+    )
+    private val STATS_DIFF_TAB_IDS = mapOf(
+        "all" to R.id.statsTabAll,
+        "daily" to R.id.statsTabDaily,
+        "easy" to R.id.statsTabEasy,
+        "medium" to R.id.statsTabMedium,
+        "hard" to R.id.statsTabHard,
+        "very_hard" to R.id.statsTabVeryHard
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -167,10 +180,13 @@ class MainActivity : AppCompatActivity() {
         screenIntro = findViewById(R.id.screenIntro)
         screenDiff = findViewById(R.id.screenDifficulty)
         screenRanking = findViewById(R.id.screenRanking)
+        screenStats = findViewById(R.id.screenStats)
         lbWikiTabs = findViewById(R.id.lbWikiTabs)
         lbContent = findViewById(R.id.lbContent)
         lbLoading = findViewById(R.id.lbLoading)
         loadingOverlay = findViewById(R.id.loadingOverlay)
+        statsWikiTabs = findViewById(R.id.statsWikiTabs)
+        statsContent = findViewById(R.id.statsContent)
 
         MobileAds.initialize(this)
         findViewById<AdView>(R.id.adBanner).loadAd(AdRequest.Builder().build())
@@ -180,6 +196,7 @@ class MainActivity : AppCompatActivity() {
                 when {
                     screenDiff.visibility == View.VISIBLE -> showScreen(screenIntro)
                     screenRanking.visibility == View.VISIBLE -> showScreen(screenIntro)
+                    screenStats.visibility == View.VISIBLE -> showScreen(screenIntro)
                     else -> finish()
                 }
             }
@@ -225,12 +242,29 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tvLangSettingHint).text = cfg.langSettingHint
         // 난이도 화면 뒤로 버튼
         findViewById<Button>(R.id.btnDiffBack).text = cfg.btnBack
+        // 랭킹 화면 타이틀
+        val rankingTitle = when (currentLang) {
+            "en" -> "🏆 Ranking"; "ja" -> "🏆 ランキング"; "de" -> "🏆 Rangliste"; "fr" -> "🏆 Classement"; else -> "🏆 랭킹"
+        }
+        findViewById<TextView>(R.id.tvRankingTitle).text = rankingTitle
         // 랭킹 탭
         findViewById<Button>(R.id.lbTabDaily).text = cfg.rankTabDaily
         findViewById<Button>(R.id.lbTabEasy).text = cfg.rankTabEasy
         findViewById<Button>(R.id.lbTabMedium).text = cfg.rankTabMedium
         findViewById<Button>(R.id.lbTabHard).text = cfg.rankTabHard
         findViewById<Button>(R.id.lbTabVeryHard).text = cfg.rankTabVeryHard
+        // 내기록 화면
+        val statsLabel = when (currentLang) { "en" -> "My Stats 📊"; "ja" -> "記録 📊"; "de" -> "Meine Stats 📊"; "fr" -> "Mes stats 📊"; else -> "내 기록 📊" }
+        val allLabel = when (currentLang) { "en" -> "All"; "ja" -> "全て"; "de" -> "Alle"; "fr" -> "Tout"; else -> "전체" }
+        val resetLabel = when (currentLang) { "en" -> "Reset"; "ja" -> "リセット"; "de" -> "Zurücksetzen"; "fr" -> "Réinitialiser"; else -> "초기화" }
+        findViewById<TextView>(R.id.tvStatsTitle).text = statsLabel
+        findViewById<Button>(R.id.statsTabAll).text = allLabel
+        findViewById<Button>(R.id.statsTabDaily).text = cfg.rankTabDaily
+        findViewById<Button>(R.id.statsTabEasy).text = cfg.rankTabEasy
+        findViewById<Button>(R.id.statsTabMedium).text = cfg.rankTabMedium
+        findViewById<Button>(R.id.statsTabHard).text = cfg.rankTabHard
+        findViewById<Button>(R.id.statsTabVeryHard).text = cfg.rankTabVeryHard
+        findViewById<Button>(R.id.btnStatsReset).text = resetLabel
     }
 
     private fun setupButtons() {
@@ -238,7 +272,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnLang).setOnClickListener { showLangPicker() }
 
         // 인트로 화면
-        findViewById<Button>(R.id.btnInfo).setOnClickListener { showOnboarding() }
+        findViewById<Button>(R.id.btnInfo).setOnClickListener { showOnboarding(showDontAsk = false) }
         findViewById<Button>(R.id.btnGoStart).setOnClickListener { showScreen(screenDiff) }
         findViewById<Button>(R.id.btnStats).setOnClickListener { showStats() }
         findViewById<Button>(R.id.btnRanking).setOnClickListener { showRanking() }
@@ -258,12 +292,38 @@ class MainActivity : AppCompatActivity() {
         DIFF_TAB_IDS.forEach { (diff, id) ->
             findViewById<Button>(id).setOnClickListener { switchLbDiff(diff) }
         }
+
+        // 내기록 화면
+        findViewById<Button>(R.id.btnStatsClose).setOnClickListener { showScreen(screenIntro) }
+        STATS_DIFF_TAB_IDS.forEach { (diff, id) ->
+            findViewById<Button>(id).setOnClickListener { switchStatsDiff(diff) }
+        }
+        findViewById<Button>(R.id.btnStatsReset).setOnClickListener {
+            val (confirmTitle, confirmOk, confirmMsg) = when (currentLang) {
+                "en" -> arrayOf("Reset Stats", "Reset", "Stats reset!")
+                "ja" -> arrayOf("リセット", "リセット", "リセットしました")
+                "de" -> arrayOf("Statistiken zurücksetzen", "Zurücksetzen", "Zurückgesetzt!")
+                "fr" -> arrayOf("Réinitialiser", "Réinitialiser", "Réinitialisées !")
+                else -> arrayOf("초기화", "초기화", "초기화됐습니다")
+            }
+            val cancelLabel = when (currentLang) { "en" -> "Cancel"; "ja" -> "キャンセル"; "de" -> "Abbrechen"; "fr" -> "Annuler"; else -> "취소" }
+            AlertDialog.Builder(this)
+                .setTitle(confirmTitle)
+                .setPositiveButton(confirmOk) { _, _ ->
+                    statsPrefs.edit().clear().apply()
+                    loadStatsContent()
+                    Toast.makeText(this, confirmMsg, Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton(cancelLabel, null)
+                .show()
+        }
     }
 
     private fun showScreen(target: View) {
         screenIntro.visibility = View.GONE
         screenDiff.visibility = View.GONE
         screenRanking.visibility = View.GONE
+        screenStats.visibility = View.GONE
         target.visibility = View.VISIBLE
     }
 
@@ -325,15 +385,65 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showStats() {
-        val total = statsPrefs.getInt("totalGames", 0)
-        val wins = statsPrefs.getInt("wins", 0)
-        val streak = statsPrefs.getInt("streak", 0)
-        val bestStreak = statsPrefs.getInt("bestStreak", 0)
-        val bestTimeMs = statsPrefs.getLong("bestTime", -1L)
-        val bestHops = statsPrefs.getInt("bestHops", -1)
-        val bestTimeStr = if (bestTimeMs > 0) fmtTime(bestTimeMs) else "—"
-        val cfg = LANGS[currentLang] ?: LANGS["namu"]!!
-        val bestHopsStr = if (bestHops > 0) "$bestHops ${cfg.hopsUnit}" else "—"
+        statsCurrentWiki = LANGS[currentLang]?.wikiForDaily ?: "namu"
+        statsCurrentDiff = "all"
+        buildStatsWikiTabs()
+        updateStatsDiffTabColors()
+        showScreen(screenStats)
+        loadStatsContent()
+    }
+
+    private fun buildStatsWikiTabs() {
+        statsWikiTabs.removeAllViews()
+        val wikiEntries = listOf(
+            "namu" to "🌲 나무", "ko" to "🇰🇷 위키",
+            "en" to "🇺🇸 EN", "ja" to "🇯🇵 JA",
+            "de" to "🇩🇪 DE", "fr" to "🇫🇷 FR"
+        )
+        val dp = resources.displayMetrics.density
+        wikiEntries.forEach { (wiki, label) ->
+            val tv = TextView(this).apply {
+                text = label
+                textSize = 13f
+                setPadding((18 * dp).toInt(), 0, (18 * dp).toInt(), 0)
+                gravity = Gravity.CENTER_VERTICAL
+                setTextColor(if (wiki == statsCurrentWiki) getColor(R.color.primary) else getColor(R.color.muted))
+                setTypeface(null, if (wiki == statsCurrentWiki) Typeface.BOLD else Typeface.NORMAL)
+                tag = wiki
+                setOnClickListener { switchStatsWiki(wiki) }
+            }
+            statsWikiTabs.addView(tv)
+        }
+    }
+
+    private fun switchStatsWiki(wiki: String) {
+        statsCurrentWiki = wiki
+        for (i in 0 until statsWikiTabs.childCount) {
+            (statsWikiTabs.getChildAt(i) as? TextView)?.let { tv ->
+                val active = tv.tag == wiki
+                tv.setTextColor(if (active) getColor(R.color.primary) else getColor(R.color.muted))
+                tv.setTypeface(null, if (active) Typeface.BOLD else Typeface.NORMAL)
+            }
+        }
+        loadStatsContent()
+    }
+
+    private fun switchStatsDiff(diff: String) {
+        statsCurrentDiff = diff
+        updateStatsDiffTabColors()
+        loadStatsContent()
+    }
+
+    private fun updateStatsDiffTabColors() {
+        STATS_DIFF_TAB_IDS.forEach { (diff, id) ->
+            findViewById<Button>(id).setTextColor(
+                if (diff == statsCurrentDiff) getColor(R.color.primary) else getColor(R.color.muted)
+            )
+        }
+    }
+
+    private fun loadStatsContent() {
+        statsContent.removeAllViews()
         val s = when (currentLang) {
             "en" -> arrayOf("My Stats", "Total games", "Wins", "Current streak", "Best streak", "Best time", "Fewest hops", "OK", "Reset", "Stats reset!")
             "ja" -> arrayOf("記録", "合計", "勝利", "連勝中", "最高連勝", "ベストタイム", "最少クリック", "OK", "リセット", "リセットしました")
@@ -341,16 +451,68 @@ class MainActivity : AppCompatActivity() {
             "fr" -> arrayOf("Mes stats", "Parties", "Victoires", "Série en cours", "Meilleure série", "Meilleur temps", "Moins de clics", "OK", "Réinitialiser", "Réinitialisées !")
             else -> arrayOf("내 기록", "총 게임", "승리", "현재 연승", "최고 연승", "최고 기록", "최소 이동", "확인", "초기화", "초기화됐습니다")
         }
-        // s: [0]title [1]total [2]wins [3]streak [4]bestStreak [5]time [6]hops [7]ok [8]reset [9]resetMsg
-        AlertDialog.Builder(this)
-            .setTitle(s[0])
-            .setMessage("${s[1]}: $total\n${s[2]}: $wins\n${s[3]}: $streak\n${s[4]}: $bestStreak\n${s[5]}: $bestTimeStr\n${s[6]}: $bestHopsStr")
-            .setPositiveButton(s[7], null)
-            .setNegativeButton(s[8]) { _, _ ->
-                statsPrefs.edit().clear().apply()
-                Toast.makeText(this, s[9], Toast.LENGTH_SHORT).show()
-            }
-            .show()
+        val cfg = LANGS[currentLang] ?: LANGS["namu"]!!
+
+        val total: Int; val wins: Int; val streak: Int
+        val bestStreak: Int; val bestMs: Long; val bestHops: Int
+
+        if (statsCurrentDiff == "all") {
+            val diffs = listOf("daily", "easy", "medium", "hard", "very_hard")
+            total = diffs.sumOf { statsPrefs.getInt("s_${statsCurrentWiki}_${it}_total", 0) }
+            wins = diffs.sumOf { statsPrefs.getInt("s_${statsCurrentWiki}_${it}_wins", 0) }
+            streak = diffs.maxOfOrNull { statsPrefs.getInt("s_${statsCurrentWiki}_${it}_streak", 0) } ?: 0
+            bestStreak = diffs.maxOfOrNull { statsPrefs.getInt("s_${statsCurrentWiki}_${it}_bestStreak", 0) } ?: 0
+            val msList = diffs.map { statsPrefs.getLong("s_${statsCurrentWiki}_${it}_bestMs", Long.MAX_VALUE) }
+            bestMs = msList.filter { it != Long.MAX_VALUE }.minOrNull() ?: -1L
+            val hopsList = diffs.map { statsPrefs.getInt("s_${statsCurrentWiki}_${it}_bestHops", Int.MAX_VALUE) }
+            bestHops = hopsList.filter { it != Int.MAX_VALUE }.minOrNull() ?: -1
+        } else {
+            val prefix = "s_${statsCurrentWiki}_${statsCurrentDiff}_"
+            total = statsPrefs.getInt("${prefix}total", 0)
+            wins = statsPrefs.getInt("${prefix}wins", 0)
+            streak = statsPrefs.getInt("${prefix}streak", 0)
+            bestStreak = statsPrefs.getInt("${prefix}bestStreak", 0)
+            bestMs = statsPrefs.getLong("${prefix}bestMs", -1L)
+            bestHops = statsPrefs.getInt("${prefix}bestHops", -1)
+        }
+
+        val bestMsStr = if (bestMs > 0) fmtTime(bestMs) else "—"
+        val bestHopsStr = if (bestHops > 0) "$bestHops ${cfg.hopsUnit}" else "—"
+
+        val rows = listOf(
+            s[1] to total.toString(),
+            s[2] to wins.toString(),
+            s[3] to streak.toString(),
+            s[4] to bestStreak.toString(),
+            s[5] to bestMsStr,
+            s[6] to bestHopsStr
+        )
+        rows.forEach { (label, value) -> statsContent.addView(buildStatRow(label, value)) }
+    }
+
+    private fun buildStatRow(label: String, value: String): View {
+        val dp = resources.displayMetrics.density
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding((16 * dp).toInt(), (14 * dp).toInt(), (16 * dp).toInt(), (14 * dp).toInt())
+            background = getDrawable(R.drawable.bg_diff_card)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.setMargins((12 * dp).toInt(), (4 * dp).toInt(), (12 * dp).toInt(), (4 * dp).toInt()) }
+            addView(TextView(this@MainActivity).apply {
+                text = label
+                textSize = 14f
+                setTextColor(getColor(R.color.muted))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = value
+                textSize = 15f
+                setTextColor(getColor(R.color.text))
+                setTypeface(null, Typeface.BOLD)
+            })
+        }
     }
 
     private fun showRanking() {
@@ -482,8 +644,8 @@ class MainActivity : AppCompatActivity() {
         val routeStart = if (entry.path.size >= 2) entry.path.first() else entry.start
         val routeEnd   = if (entry.path.size >= 2) entry.path.last()  else entry.goal
         val routeMid   = when {
-            entry.path.size >= 4 -> " ··· "   // 중간 페이지가 2개 이상이면 생략
-            entry.path.size == 3 -> " → ${entry.path[1]} → "  // 중간 1개는 그대로
+            entry.path.size >= 4 -> " ··· "
+            entry.path.size == 3 -> " → ${entry.path[1]} → "
             else -> " → "
         }
         if (routeStart.isNotEmpty() || routeEnd.isNotEmpty()) {
@@ -491,7 +653,6 @@ class MainActivity : AppCompatActivity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, (3 * dp).toInt(), 0, 0)
-                // 시작 (길면 끝에서 말줄임)
                 addView(TextView(this@MainActivity).apply {
                     text = routeStart
                     textSize = 12f
@@ -499,13 +660,11 @@ class MainActivity : AppCompatActivity() {
                     maxLines = 1; ellipsize = TextUtils.TruncateAt.END
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 })
-                // 구분자 (고정)
                 addView(TextView(this@MainActivity).apply {
                     text = routeMid
                     textSize = 12f
                     setTextColor(getColor(R.color.muted))
                 })
-                // 끝 (길면 끝에서 말줄임)
                 addView(TextView(this@MainActivity).apply {
                     text = routeEnd
                     textSize = 12f
@@ -521,10 +680,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showOnboardingIfNeeded() {
         if (prefs.getBoolean("onboarding_done", false)) return
-        showOnboarding()
+        showOnboarding(showDontAsk = true)
     }
 
-    private fun showOnboarding() {
+    private fun showOnboarding(showDontAsk: Boolean = true) {
         val cfg = LANGS[currentLang] ?: LANGS["namu"]!!
         val rules = "${cfg.rule1}\n\n${cfg.rule2}\n\n${cfg.rule3}\n\n${cfg.rule4}"
         val (title, extra, btnOk, btnSkip) = when (currentLang) {
@@ -554,17 +713,17 @@ class MainActivity : AppCompatActivity() {
                 "시작하기!", "다시 보지 않기"
             )
         }
-        AlertDialog.Builder(this)
+        val builder = AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage("📖 ${cfg.howToPlay}\n\n$rules\n\n$extra")
-            .setPositiveButton(btnOk) { _, _ ->
-                prefs.edit().putBoolean("onboarding_done", true).apply()
-            }
-            .setNegativeButton(btnSkip) { _, _ ->
-                prefs.edit().putBoolean("onboarding_done", true).apply()
-            }
+            .setPositiveButton(btnOk, null)  // OK: 다시 보지 않기 없이 그냥 닫기
             .setCancelable(false)
-            .show()
+        if (showDontAsk) {
+            builder.setNegativeButton(btnSkip) { _, _ ->
+                prefs.edit().putBoolean("onboarding_done", true).apply()
+            }
+        }
+        builder.show()
     }
 
     private fun fmtTime(ms: Long): String {

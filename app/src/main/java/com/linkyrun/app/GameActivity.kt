@@ -109,11 +109,18 @@ class GameActivity : AppCompatActivity() {
     private lateinit var tvTimer: TextView
     private lateinit var tvHops: TextView
     private lateinit var tvGoal: TextView
+    private lateinit var tvGoalLabel: TextView
     private lateinit var btnGiveUp: Button
+    private lateinit var btnReadPage: Button
     private lateinit var victoryOverlay: FrameLayout
+    private lateinit var tvVictoryTitle: TextView
+    private lateinit var tvVictoryTimeLabel: TextView
+    private lateinit var tvVictoryHopsLabel: TextView
+    private lateinit var tvVictoryPathLabel: TextView
     private lateinit var tvVictoryTime: TextView
     private lateinit var tvVictoryHops: TextView
     private lateinit var tvVictoryPath: TextView
+    private lateinit var tvRankTitle: TextView
     private lateinit var btnSubmitRank: Button
     private lateinit var etNickname: EditText
     private lateinit var tvRankResult: TextView
@@ -126,10 +133,17 @@ class GameActivity : AppCompatActivity() {
     private lateinit var pathPanel: View
     private lateinit var pathContent: LinearLayout
     private lateinit var hudCenter: View
+    private lateinit var pageLoadingOverlay: View
 
     private var lastProgrammaticUrl: String? = null
+    private var pendingVictory = false
+    private var gameCompleted = false
     private lateinit var gameState: GameState
     private lateinit var statsPrefs: SharedPreferences
+
+    private val gameLang: String by lazy {
+        getSharedPreferences("linkyrun", MODE_PRIVATE).getString("lang", "namu") ?: "namu"
+    }
 
     private val handler = Handler(Looper.getMainLooper())
     private val timerRunnable = object : Runnable {
@@ -164,21 +178,22 @@ class GameActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 when {
                     victoryOverlay.visibility == View.VISIBLE -> finish()
+                    gameCompleted -> finish()
                     pathPanel.visibility == View.VISIBLE -> pathPanel.visibility = View.GONE
-                    webView.canGoBack() -> webView.goBack()
                     else -> showGiveUpDialog()
                 }
             }
         })
 
         bindViews()
+        applyGameLang()
         setupInsets()
-        setupWebView()   // JS injection 포함
+        setupWebView()
         setupButtons()
         syncHUD()
 
         webView.loadUrl(buildWikiUrl(start, wiki))
-        handler.post(timerRunnable)
+        showStartPopup()
     }
 
     private fun buildWikiUrl(title: String, wiki: String): String {
@@ -193,27 +208,35 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun bindViews() {
-        webView       = findViewById(R.id.webView)
-        tvTimer       = findViewById(R.id.tvTimer)
-        tvHops        = findViewById(R.id.tvHops)
-        tvGoal        = findViewById(R.id.tvGoal)
-        btnGiveUp     = findViewById(R.id.btnGiveUp)
-        victoryOverlay = findViewById(R.id.victoryOverlay)
-        tvVictoryTime = findViewById(R.id.tvVictoryTime)
-        tvVictoryHops = findViewById(R.id.tvVictoryHops)
-        tvVictoryPath = findViewById(R.id.tvVictoryPath)
-        btnSubmitRank = findViewById(R.id.btnSubmitRank)
-        etNickname    = findViewById(R.id.etNickname)
-        tvRankResult  = findViewById(R.id.tvRankResult)
-        btnPlayAgain  = findViewById(R.id.btnPlayAgain)
-        btnGoHome     = findViewById(R.id.btnGoHome)
-        btnShare      = findViewById(R.id.btnShare)
-        btnChallenge  = findViewById(R.id.btnChallenge)
-        rankSection   = findViewById(R.id.rankSection)
-        hud           = findViewById(R.id.hud)
-        pathPanel     = findViewById(R.id.pathPanel)
-        pathContent   = findViewById(R.id.pathContent)
-        hudCenter     = findViewById(R.id.hudCenter)
+        webView              = findViewById(R.id.webView)
+        tvTimer              = findViewById(R.id.tvTimer)
+        tvHops               = findViewById(R.id.tvHops)
+        tvGoal               = findViewById(R.id.tvGoal)
+        tvGoalLabel          = findViewById(R.id.tvGoalLabel)
+        btnGiveUp            = findViewById(R.id.btnGiveUp)
+        btnReadPage          = findViewById(R.id.btnReadPage)
+        victoryOverlay       = findViewById(R.id.victoryOverlay)
+        tvVictoryTitle       = findViewById(R.id.tvVictoryTitle)
+        tvVictoryTimeLabel   = findViewById(R.id.tvVictoryTimeLabel)
+        tvVictoryHopsLabel   = findViewById(R.id.tvVictoryHopsLabel)
+        tvVictoryPathLabel   = findViewById(R.id.tvVictoryPathLabel)
+        tvVictoryTime        = findViewById(R.id.tvVictoryTime)
+        tvVictoryHops        = findViewById(R.id.tvVictoryHops)
+        tvVictoryPath        = findViewById(R.id.tvVictoryPath)
+        tvRankTitle          = findViewById(R.id.tvRankTitle)
+        btnSubmitRank        = findViewById(R.id.btnSubmitRank)
+        etNickname           = findViewById(R.id.etNickname)
+        tvRankResult         = findViewById(R.id.tvRankResult)
+        btnPlayAgain         = findViewById(R.id.btnPlayAgain)
+        btnGoHome            = findViewById(R.id.btnGoHome)
+        btnShare             = findViewById(R.id.btnShare)
+        btnChallenge         = findViewById(R.id.btnChallenge)
+        rankSection          = findViewById(R.id.rankSection)
+        hud                  = findViewById(R.id.hud)
+        pathPanel            = findViewById(R.id.pathPanel)
+        pathContent          = findViewById(R.id.pathContent)
+        hudCenter            = findViewById(R.id.hudCenter)
+        pageLoadingOverlay   = findViewById(R.id.pageLoadingOverlay)
     }
 
     private fun setupInsets() {
@@ -258,14 +281,35 @@ class GameActivity : AppCompatActivity() {
 
         webView.webViewClient = object : WebViewClient() {
 
+            override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                // 게임 시작 후 이동 시에만 로딩 표시 (초기 페이지 로드 제외)
+                if (gameState.hops > 0 || pendingVictory) {
+                    pageLoadingOverlay.visibility = View.VISIBLE
+                }
+            }
+
             override fun onPageFinished(view: WebView, url: String) {
+                pageLoadingOverlay.visibility = View.GONE
+                view.clearHistory()  // 뒤로가기 히스토리 누적 방지
+
                 // ★ 페이지 로드 완료마다 JS 재주입 (SPA 네비게이션 대응)
                 val js = if (gameState.wiki == "namu") NAMU_INJECT_JS else WIKI_INJECT_JS
                 view.evaluateJavascript(js, null)
 
+                // 목적지 도달 후 페이지 로드 완료 → 빅토리 오버레이 표시
+                if (pendingVictory) {
+                    pendingVictory = false
+                    showVictory()
+                    return
+                }
+
                 // 리다이렉트 후 최종 URL로 목표 확인
                 val title = extractTitle(url, gameState.wiki)
                 if (title != null && gameState.active && gameState.hops > 0 && isGoal(title, gameState.goal)) {
+                    handler.removeCallbacks(timerRunnable)
+                    gameState.elapsed = System.currentTimeMillis() - gameState.startTime
+                    gameState.active = false
+                    updatePersonalStats()
                     showVictory()
                 }
             }
@@ -299,7 +343,14 @@ class GameActivity : AppCompatActivity() {
         syncHUD()
 
         if (isGoal(title, gameState.goal)) {
-            showVictory()
+            // 타이머 정지 + 기록 저장 후, 목적 페이지로 이동하고 onPageFinished에서 빅토리 표시
+            handler.removeCallbacks(timerRunnable)
+            gameState.elapsed = System.currentTimeMillis() - gameState.startTime
+            gameState.active = false
+            updatePersonalStats()
+            pendingVictory = true
+            if (gameState.wiki != "namu") lastProgrammaticUrl = url
+            webView.loadUrl(url)
             return true
         }
 
@@ -368,16 +419,121 @@ class GameActivity : AppCompatActivity() {
         return if (m > 0) "%02d:%02d".format(m, ss) else "%02d.%02d".format(ss, cs)
     }
 
+    private fun applyGameLang() {
+        tvGoalLabel.text = when (gameLang) {
+            "en" -> "GOAL ▾"; "ja" -> "ゴール ▾"; "de" -> "ZIEL ▾"; "fr" -> "BUT ▾"; else -> "목표 ▾"
+        }
+        btnGiveUp.text = when (gameLang) {
+            "en" -> "Quit"; "ja" -> "やめる"; "de" -> "Aufgeben"; "fr" -> "Abandonner"; else -> "포기"
+        }
+        tvVictoryTitle.text = when (gameLang) {
+            "en" -> "🎉  Arrived!"; "ja" -> "🎉  ゴール！"; "de" -> "🎉  Geschafft!"; "fr" -> "🎉  Arrivé !"; else -> "🎉  도착!"
+        }
+        tvVictoryTimeLabel.text = when (gameLang) {
+            "en" -> "TIME"; "ja" -> "タイム"; "de" -> "ZEIT"; "fr" -> "TEMPS"; else -> "시간"
+        }
+        tvVictoryHopsLabel.text = when (gameLang) {
+            "en" -> "HOPS"; "ja" -> "クリック"; "de" -> "KLICKS"; "fr" -> "CLICS"; else -> "이동"
+        }
+        tvVictoryPathLabel.text = when (gameLang) {
+            "en" -> "PATH"; "ja" -> "ルート"; "de" -> "ROUTE"; "fr" -> "CHEMIN"; else -> "경로"
+        }
+        tvRankTitle.text = when (gameLang) {
+            "en" -> "Submit Score"; "ja" -> "記録登録"; "de" -> "Rangliste"; "fr" -> "Classement"; else -> "랭킹 등록"
+        }
+        etNickname.hint = when (gameLang) {
+            "en" -> "Enter nickname"; "ja" -> "ニックネームを入力"; "de" -> "Name eingeben"; "fr" -> "Entrer un pseudo"; else -> "닉네임 입력"
+        }
+        btnSubmitRank.text = when (gameLang) {
+            "en" -> "Submit"; "ja" -> "登録"; "de" -> "Eintragen"; "fr" -> "Soumettre"; else -> "랭킹 등록"
+        }
+        btnPlayAgain.text = when (gameLang) {
+            "en" -> "Play Again"; "ja" -> "もう一回"; "de" -> "Nochmal"; "fr" -> "Rejouer"; else -> "다시 하기"
+        }
+        btnGoHome.text = when (gameLang) {
+            "en" -> "Home"; "ja" -> "ホーム"; "de" -> "Start"; "fr" -> "Accueil"; else -> "홈으로"
+        }
+        btnReadPage.text = getReadPageText()
+    }
+
+    private fun getHopsUnit(): String = when (gameLang) {
+        "en" -> "hops"
+        "ja" -> "クリック"
+        "de" -> "Klicks"
+        "fr" -> "clics"
+        else -> "홉"
+    }
+
+    private fun getCloseText(): String = when (gameLang) {
+        "en" -> "Close"
+        "ja" -> "閉じる"
+        "de" -> "Schließen"
+        "fr" -> "Fermer"
+        else -> "닫기"
+    }
+
+    private fun getReadPageText(): String = when (gameLang) {
+        "en" -> "📖 Read"
+        "ja" -> "📖 読む"
+        "de" -> "📖 Lesen"
+        "fr" -> "📖 Lire"
+        else -> "📖 읽기"
+    }
+
+    private fun showStartPopup() {
+        val (title, goalLabel, rulesLabel, rules, btnStart) = when (gameLang) {
+            "en" -> arrayOf(
+                "Ready?", "Goal:", "Rules",
+                "1. Click internal links only to navigate\n2. Reach the goal in fewest hops!\n3. No back button · No search · No external links",
+                "Start!"
+            )
+            "ja" -> arrayOf(
+                "準備はいいですか？", "ゴール:", "ルール",
+                "1. 内部リンクのみクリック\n2. 最少クリックでゴール！\n3. 戻るボタン・検索・外部リンク禁止",
+                "スタート！"
+            )
+            "de" -> arrayOf(
+                "Bereit?", "Zielseite:", "Regeln",
+                "1. Nur interne Links anklicken\n2. Ziel in wenigsten Klicks!\n3. Kein Zurück · Keine Suche · Keine externen Links",
+                "Start!"
+            )
+            "fr" -> arrayOf(
+                "Prêt(e) ?", "Page cible :", "Règles",
+                "1. Cliquer uniquement les liens internes\n2. Atteindre le but en moins de clics !\n3. Pas de retour · Pas de recherche · Pas de liens externes",
+                "C'est parti !"
+            )
+            else -> arrayOf(
+                "준비됐나요?", "목적 페이지:", "게임 방법",
+                "1. 내부 링크만 클릭해서 목표 페이지까지 이동\n2. 최단 시간 · 최소 클릭으로 도달하면 승리!\n3. 뒤로 가기 · 검색 · 외부 링크 사용 금지",
+                "시작!"
+            )
+        }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage("$goalLabel  ${gameState.goal}\n\n$rulesLabel\n$rules")
+            .setPositiveButton(btnStart) { _, _ ->
+                gameState.startTime = System.currentTimeMillis()
+                handler.post(timerRunnable)
+            }
+            .setCancelable(false)
+            .show()
+    }
+
     private fun showVictory() {
-        if (!gameState.active) return
-        handler.removeCallbacks(timerRunnable)
-        gameState.elapsed = System.currentTimeMillis() - gameState.startTime
-        gameState.active = false
-        updatePersonalStats()
+        if (victoryOverlay.visibility == View.VISIBLE) return
+        // pendingVictory 경로: active=false, elapsed 이미 설정됨
+        // 리다이렉트 직접 감지 경로: active=true인 경우 여기서 처리
+        if (gameState.active) {
+            handler.removeCallbacks(timerRunnable)
+            gameState.elapsed = System.currentTimeMillis() - gameState.startTime
+            gameState.active = false
+            updatePersonalStats()
+        }
 
         tvVictoryTime.text = fmtTime(gameState.elapsed)
-        tvVictoryHops.text = "${gameState.hops}홉"
+        tvVictoryHops.text = "${gameState.hops} ${getHopsUnit()}"
         tvTimer.text = fmtTime(gameState.elapsed)
+        btnReadPage.text = getReadPageText()
 
         tvVictoryPath.text = gameState.path.joinToString(" → ")
 
@@ -393,6 +549,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun updatePersonalStats() {
+        // 전체 통계
         val wins = statsPrefs.getInt("wins", 0) + 1
         val total = statsPrefs.getInt("totalGames", 0) + 1
         val streak = statsPrefs.getInt("streak", 0) + 1
@@ -401,16 +558,39 @@ class GameActivity : AppCompatActivity() {
         val bestTime = if (gameState.elapsed < prevBestTime) gameState.elapsed else prevBestTime
         val prevBestHops = statsPrefs.getInt("bestHops", Int.MAX_VALUE)
         val bestHops = if (gameState.hops < prevBestHops) gameState.hops else prevBestHops
+
+        // 위키+난이도별 통계
+        val prefix = "s_${gameState.wiki}_${gameState.difficulty}_"
+        val cTotal = statsPrefs.getInt("${prefix}total", 0) + 1
+        val cWins = statsPrefs.getInt("${prefix}wins", 0) + 1
+        val cStreak = statsPrefs.getInt("${prefix}streak", 0) + 1
+        val cBestStreak = maxOf(statsPrefs.getInt("${prefix}bestStreak", 0), cStreak)
+        val cPrevBestMs = statsPrefs.getLong("${prefix}bestMs", Long.MAX_VALUE)
+        val cBestMs = if (gameState.elapsed < cPrevBestMs) gameState.elapsed else cPrevBestMs
+        val cPrevBestHops = statsPrefs.getInt("${prefix}bestHops", Int.MAX_VALUE)
+        val cBestHops = if (gameState.hops < cPrevBestHops) gameState.hops else cPrevBestHops
+
         statsPrefs.edit()
             .putInt("wins", wins).putInt("totalGames", total)
             .putInt("streak", streak).putInt("bestStreak", bestStreak)
             .putLong("bestTime", bestTime).putInt("bestHops", bestHops)
+            .putInt("${prefix}total", cTotal).putInt("${prefix}wins", cWins)
+            .putInt("${prefix}streak", cStreak).putInt("${prefix}bestStreak", cBestStreak)
+            .putLong("${prefix}bestMs", cBestMs).putInt("${prefix}bestHops", cBestHops)
             .apply()
     }
 
     private fun setupButtons() {
         hudCenter.setOnClickListener { togglePathPanel() }
-        btnGiveUp.setOnClickListener { showGiveUpDialog() }
+        btnGiveUp.setOnClickListener {
+            if (gameCompleted) finish() else showGiveUpDialog()
+        }
+
+        btnReadPage.setOnClickListener {
+            victoryOverlay.visibility = View.GONE
+            gameCompleted = true
+            btnGiveUp.text = getCloseText()
+        }
 
         btnSubmitRank.setOnClickListener {
             val nick = etNickname.text.toString().trim()
@@ -473,26 +653,41 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showGiveUpDialog() {
+        val (title, pos, neu, neg) = when (gameLang) {
+            "en" -> arrayOf("Give up?", "Give Up", "Go to Goal Page", "Keep Playing")
+            "ja" -> arrayOf("ギブアップしますか？", "ギブアップ", "ゴールページへ", "続ける")
+            "de" -> arrayOf("Aufgeben?", "Aufgeben", "Zur Zielseite", "Weiterspielen")
+            "fr" -> arrayOf("Abandonner ?", "Abandonner", "Aller à la cible", "Continuer")
+            else -> arrayOf("게임을 포기할까요?", "포기", "목적 페이지로 이동", "계속하기")
+        }
         AlertDialog.Builder(this)
-            .setTitle("게임을 포기할까요?")
+            .setTitle(title)
             .setMessage("${gameState.start} → ${gameState.goal}")
-            .setPositiveButton("포기") { _, _ -> recordGiveUp(); finish() }
-            .setNeutralButton("목적 페이지로 이동") { _, _ ->
+            .setPositiveButton(pos) { _, _ -> recordGiveUp(); finish() }
+            .setNeutralButton(neu) { _, _ ->
                 recordGiveUp()
                 gameState.active = false
                 handler.removeCallbacks(timerRunnable)
+                gameCompleted = true
+                btnGiveUp.text = getCloseText()
                 webView.loadUrl(buildWikiUrl(gameState.goal, gameState.wiki))
             }
-            .setNegativeButton("계속하기", null)
+            .setNegativeButton(neg, null)
             .show()
     }
 
     private fun recordGiveUp() {
-        statsPrefs.edit().putInt("totalGames", statsPrefs.getInt("totalGames", 0) + 1).putInt("streak", 0).apply()
+        val prefix = "s_${gameState.wiki}_${gameState.difficulty}_"
+        statsPrefs.edit()
+            .putInt("totalGames", statsPrefs.getInt("totalGames", 0) + 1)
+            .putInt("streak", 0)
+            .putInt("${prefix}total", statsPrefs.getInt("${prefix}total", 0) + 1)
+            .putInt("${prefix}streak", 0)
+            .apply()
     }
 
     private fun shareResult() {
-        val text = "Linky Run\n${gameState.start} → ${gameState.goal}\n⏱ ${fmtTime(gameState.elapsed)}  🔗 ${gameState.hops}홉\nhttps://linkyrun.com"
+        val text = "Linky Run\n${gameState.start} → ${gameState.goal}\n⏱ ${fmtTime(gameState.elapsed)}  🔗 ${gameState.hops}${getHopsUnit()}\nhttps://linkyrun.com"
         startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "공유"))
     }
 
@@ -501,7 +696,7 @@ class GameActivity : AppCompatActivity() {
         thread {
             val url = ApiClient.createChallenge(gs.start, gs.goal, gs.wiki, gs.hops, gs.elapsed)
                 ?: "https://linkyrun.com/?start=${gs.start}&goal=${gs.goal}&wiki=${gs.wiki}"
-            val text = "Linky Run 도전장!\n${gs.start} → ${gs.goal}\n내 기록: ⏱ ${fmtTime(gs.elapsed)}  🔗 ${gs.hops}홉\n도전: $url"
+            val text = "Linky Run 도전장!\n${gs.start} → ${gs.goal}\n내 기록: ⏱ ${fmtTime(gs.elapsed)}  🔗 ${gs.hops}${getHopsUnit()}\n도전: $url"
             runOnUiThread {
                 try {
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
