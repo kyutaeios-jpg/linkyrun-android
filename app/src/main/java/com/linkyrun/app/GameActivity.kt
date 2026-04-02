@@ -27,6 +27,7 @@ class GameActivity : AppCompatActivity() {
         const val EXTRA_DIFFICULTY = "difficulty"
         const val EXTRA_WIKI = "wiki"
         const val EXTRA_DAY_NUM = "day_num"
+        const val EXTRA_IS_GUIDE = "is_guide"
 
         private val NAMU_PREFIXES = listOf(
             "https://namu.wiki/w/",
@@ -39,7 +40,10 @@ class GameActivity : AppCompatActivity() {
             "ko" to Pair("ko.wikipedia.org", "/wiki/"),
             "ja" to Pair("ja.wikipedia.org", "/wiki/"),
             "de" to Pair("de.wikipedia.org", "/wiki/"),
-            "fr" to Pair("fr.wikipedia.org", "/wiki/")
+            "fr" to Pair("fr.wikipedia.org", "/wiki/"),
+            "es" to Pair("es.wikipedia.org", "/wiki/"),
+            "pt" to Pair("pt.wikipedia.org", "/wiki/"),
+            "it" to Pair("it.wikipedia.org", "/wiki/")
         )
 
         // namu.wiki에 주입할 JS: 링크 클릭 인터셉트 + 헤더 숨김
@@ -48,9 +52,9 @@ class GameActivity : AppCompatActivity() {
                 if (window.__linkyInjected) return;
                 window.__linkyInjected = true;
 
-                // namu.wiki 자체 헤더 숨김
+                // namu.wiki 자체 헤더/검색 숨김
                 var style = document.createElement('style');
-                style.textContent = 'header{display:none!important}body,#app>div{padding-top:0!important;margin-top:0!important}';
+                style.textContent = 'header{display:none!important}body,#app>div{padding-top:0!important;margin-top:0!important}[class*=search]{display:none!important}[id*=search]{display:none!important}input[type=search]{display:none!important}';
                 (document.head||document.documentElement).appendChild(style);
 
                 function hideNamuHeader(){
@@ -91,6 +95,12 @@ class GameActivity : AppCompatActivity() {
             (function(){
                 if (window.__linkyInjected) return;
                 window.__linkyInjected = true;
+
+                // 위키피디아 검색 UI 숨김
+                var style = document.createElement('style');
+                style.textContent = '#searchInput,#searchButton,.search-toggle,#p-search,.minerva-search-form,.header-search,input[name=search],.search-box,#searchform,.search-container{display:none!important}';
+                (document.head||document.documentElement).appendChild(style);
+
                 document.addEventListener('click', function(e){
                     var a = e.target.closest('a');
                     if (!a || !a.href) return;
@@ -138,6 +148,7 @@ class GameActivity : AppCompatActivity() {
     private var lastProgrammaticUrl: String? = null
     private var pendingVictory = false
     private var gameCompleted = false
+    private var isGuide = false
     private lateinit var gameState: GameState
     private lateinit var statsPrefs: SharedPreferences
 
@@ -168,6 +179,7 @@ class GameActivity : AppCompatActivity() {
         val difficulty = intent.getStringExtra(EXTRA_DIFFICULTY) ?: "easy"
         val wiki = intent.getStringExtra(EXTRA_WIKI) ?: "namu"
         val dayNum = if (intent.hasExtra(EXTRA_DAY_NUM)) intent.getIntExtra(EXTRA_DAY_NUM, 0) else null
+        isGuide = intent.getBooleanExtra(EXTRA_IS_GUIDE, false)
 
         gameState = GameState(
             start = start, goal = goal,
@@ -194,6 +206,10 @@ class GameActivity : AppCompatActivity() {
 
         webView.loadUrl(buildWikiUrl(start, wiki))
         showStartPopup()
+
+        if (isGuide) {
+            showGuideHint()
+        }
     }
 
     private fun buildWikiUrl(title: String, wiki: String): String {
@@ -247,8 +263,7 @@ class GameActivity : AppCompatActivity() {
         }
         ViewCompat.setOnApplyWindowInsetsListener(victoryOverlay) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val sv = (v as FrameLayout).getChildAt(0)
-            sv?.setPadding(0, bars.top, 0, bars.bottom)
+            v.setPadding(0, 0, 0, bars.bottom)
             insets
         }
         hud.post {
@@ -315,8 +330,12 @@ class GameActivity : AppCompatActivity() {
             }
 
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                if (gameState.wiki == "namu") return false  // namu: JS injection이 처리
                 val url = request.url.toString()
+                // 검색 URL 차단
+                if (url.contains("/search") || url.contains("Special:Search") || url.contains("action=search") || url.contains("search=")) {
+                    return true
+                }
+                if (gameState.wiki == "namu") return false  // namu: JS injection이 처리
                 // 우리가 직접 loadUrl한 URL이면 hop 중복 카운트 없이 허용
                 if (url == lastProgrammaticUrl) {
                     lastProgrammaticUrl = null
@@ -421,63 +440,65 @@ class GameActivity : AppCompatActivity() {
 
     private fun applyGameLang() {
         tvGoalLabel.text = when (gameLang) {
-            "en" -> "GOAL ▾"; "ja" -> "ゴール ▾"; "de" -> "ZIEL ▾"; "fr" -> "BUT ▾"; else -> "목표 ▾"
+            "en" -> "GOAL ▾"; "ja" -> "ゴール ▾"; "de" -> "ZIEL ▾"; "fr" -> "BUT ▾"
+            "es" -> "META ▾"; "pt" -> "META ▾"; "it" -> "META ▾"; else -> "목표 ▾"
         }
         btnGiveUp.text = when (gameLang) {
-            "en" -> "Quit"; "ja" -> "やめる"; "de" -> "Aufgeben"; "fr" -> "Abandonner"; else -> "포기"
+            "en" -> "Quit"; "ja" -> "やめる"; "de" -> "Aufgeben"; "fr" -> "Abandonner"
+            "es" -> "Rendirse"; "pt" -> "Desistir"; "it" -> "Arrendersi"; else -> "포기"
         }
         tvVictoryTitle.text = when (gameLang) {
-            "en" -> "🎉  Arrived!"; "ja" -> "🎉  ゴール！"; "de" -> "🎉  Geschafft!"; "fr" -> "🎉  Arrivé !"; else -> "🎉  도착!"
+            "en" -> "🎉  Arrived!"; "ja" -> "🎉  ゴール！"; "de" -> "🎉  Geschafft!"; "fr" -> "🎉  Arrivé !"
+            "es" -> "🎉  ¡Llegaste!"; "pt" -> "🎉  Chegou!"; "it" -> "🎉  Arrivato!"; else -> "🎉  도착!"
         }
         tvVictoryTimeLabel.text = when (gameLang) {
-            "en" -> "TIME"; "ja" -> "タイム"; "de" -> "ZEIT"; "fr" -> "TEMPS"; else -> "시간"
+            "en" -> "TIME"; "ja" -> "タイム"; "de" -> "ZEIT"; "fr" -> "TEMPS"
+            "es" -> "TIEMPO"; "pt" -> "TEMPO"; "it" -> "TEMPO"; else -> "시간"
         }
         tvVictoryHopsLabel.text = when (gameLang) {
-            "en" -> "HOPS"; "ja" -> "クリック"; "de" -> "KLICKS"; "fr" -> "CLICS"; else -> "이동"
+            "en" -> "HOPS"; "ja" -> "クリック"; "de" -> "KLICKS"; "fr" -> "CLICS"
+            "es" -> "CLICS"; "pt" -> "CLIQUES"; "it" -> "CLIC"; else -> "이동"
         }
         tvVictoryPathLabel.text = when (gameLang) {
-            "en" -> "PATH"; "ja" -> "ルート"; "de" -> "ROUTE"; "fr" -> "CHEMIN"; else -> "경로"
+            "en" -> "PATH"; "ja" -> "ルート"; "de" -> "ROUTE"; "fr" -> "CHEMIN"
+            "es" -> "RUTA"; "pt" -> "ROTA"; "it" -> "PERCORSO"; else -> "경로"
         }
         tvRankTitle.text = when (gameLang) {
-            "en" -> "Submit Score"; "ja" -> "記録登録"; "de" -> "Rangliste"; "fr" -> "Classement"; else -> "랭킹 등록"
+            "en" -> "Submit Score"; "ja" -> "記録登録"; "de" -> "Rangliste"; "fr" -> "Classement"
+            "es" -> "Enviar puntuación"; "pt" -> "Enviar pontuação"; "it" -> "Invia punteggio"; else -> "랭킹 등록"
         }
         etNickname.hint = when (gameLang) {
-            "en" -> "Enter nickname"; "ja" -> "ニックネームを入力"; "de" -> "Name eingeben"; "fr" -> "Entrer un pseudo"; else -> "닉네임 입력"
+            "en" -> "Enter nickname"; "ja" -> "ニックネームを入力"; "de" -> "Name eingeben"; "fr" -> "Entrer un pseudo"
+            "es" -> "Ingresa apodo"; "pt" -> "Digite apelido"; "it" -> "Inserisci nickname"; else -> "닉네임 입력"
         }
         btnSubmitRank.text = when (gameLang) {
-            "en" -> "Submit"; "ja" -> "登録"; "de" -> "Eintragen"; "fr" -> "Soumettre"; else -> "랭킹 등록"
+            "en" -> "Submit"; "ja" -> "登録"; "de" -> "Eintragen"; "fr" -> "Soumettre"
+            "es" -> "Enviar"; "pt" -> "Enviar"; "it" -> "Invia"; else -> "랭킹 등록"
         }
         btnPlayAgain.text = when (gameLang) {
-            "en" -> "Play Again"; "ja" -> "もう一回"; "de" -> "Nochmal"; "fr" -> "Rejouer"; else -> "다시 하기"
+            "en" -> "Play Again"; "ja" -> "もう一回"; "de" -> "Nochmal"; "fr" -> "Rejouer"
+            "es" -> "Otra vez"; "pt" -> "Jogar de novo"; "it" -> "Rigioca"; else -> "다시 하기"
         }
         btnGoHome.text = when (gameLang) {
-            "en" -> "Home"; "ja" -> "ホーム"; "de" -> "Start"; "fr" -> "Accueil"; else -> "홈으로"
+            "en" -> "Home"; "ja" -> "ホーム"; "de" -> "Start"; "fr" -> "Accueil"
+            "es" -> "Inicio"; "pt" -> "Início"; "it" -> "Home"; else -> "홈으로"
         }
         btnReadPage.text = getReadPageText()
     }
 
     private fun getHopsUnit(): String = when (gameLang) {
-        "en" -> "hops"
-        "ja" -> "クリック"
-        "de" -> "Klicks"
-        "fr" -> "clics"
-        else -> "홉"
+        "en" -> "hops"; "ja" -> "クリック"; "de" -> "Klicks"; "fr" -> "clics"
+        "es" -> "clics"; "pt" -> "cliques"; "it" -> "clic"; else -> "홉"
     }
 
     private fun getCloseText(): String = when (gameLang) {
-        "en" -> "Close"
-        "ja" -> "閉じる"
-        "de" -> "Schließen"
-        "fr" -> "Fermer"
-        else -> "닫기"
+        "en" -> "Close"; "ja" -> "閉じる"; "de" -> "Schließen"; "fr" -> "Fermer"
+        "es" -> "Cerrar"; "pt" -> "Fechar"; "it" -> "Chiudi"; else -> "닫기"
     }
 
     private fun getReadPageText(): String = when (gameLang) {
-        "en" -> "📖 Read"
-        "ja" -> "📖 読む"
-        "de" -> "📖 Lesen"
-        "fr" -> "📖 Lire"
-        else -> "📖 읽기"
+        "en" -> "📖 Read"; "ja" -> "📖 読む"; "de" -> "📖 Lesen"; "fr" -> "📖 Lire"
+        "es" -> "📖 Leer"; "pt" -> "📖 Ler"; "it" -> "📖 Leggi"; else -> "📖 읽기"
     }
 
     private fun showStartPopup() {
@@ -501,6 +522,21 @@ class GameActivity : AppCompatActivity() {
                 "Prêt(e) ?", "Page cible :", "Règles",
                 "1. Cliquer uniquement les liens internes\n2. Atteindre le but en moins de clics !\n3. Pas de retour · Pas de recherche · Pas de liens externes",
                 "C'est parti !"
+            )
+            "es" -> arrayOf(
+                "¿Listo?", "Página objetivo:", "Reglas",
+                "1. Solo haz clic en enlaces internos\n2. ¡Llega a la meta en menos clics!\n3. Sin retroceso · Sin búsqueda · Sin enlaces externos",
+                "¡Empezar!"
+            )
+            "pt" -> arrayOf(
+                "Pronto?", "Página alvo:", "Regras",
+                "1. Clique apenas em links internos\n2. Chegue ao destino com menos cliques!\n3. Sem voltar · Sem busca · Sem links externos",
+                "Começar!"
+            )
+            "it" -> arrayOf(
+                "Pronto?", "Pagina obiettivo:", "Regole",
+                "1. Clicca solo sui link interni\n2. Raggiungi l'obiettivo con meno clic!\n3. Niente indietro · Niente ricerca · Niente link esterni",
+                "Inizia!"
             )
             else -> arrayOf(
                 "준비됐나요?", "목적 페이지:", "게임 방법",
@@ -537,18 +573,38 @@ class GameActivity : AppCompatActivity() {
 
         tvVictoryPath.text = gameState.path.joinToString(" → ")
 
-        if (gameState.difficulty == "daily" || gameState.difficulty == "custom") {
+        if (gameState.difficulty == "custom" || isGuide) {
             rankSection.visibility = View.GONE
         }
 
-        // HUD 아래에서 시작하도록 ScrollView 상단 패딩 조정
-        val sv = victoryOverlay.getChildAt(0)
-        hud.post { sv?.setPadding(0, hud.height, 0, 0) }
+        if (isGuide) {
+            guideBanner?.visibility = View.GONE
+            statsPrefs.edit().putBoolean("guide_done", true).apply()
+            val toastMsg = when (gameLang) {
+                "en" -> "First clear! Now play freely \uD83C\uDF89"
+                "ja" -> "初クリア！自由にプレイしよう \uD83C\uDF89"
+                "de" -> "Erster Sieg! Jetzt frei spielen \uD83C\uDF89"
+                "fr" -> "Premier succès ! Jouez librement \uD83C\uDF89"
+                "es" -> "¡Primera victoria! Juega libremente \uD83C\uDF89"
+                "pt" -> "Primeira vitória! Jogue livremente \uD83C\uDF89"
+                "it" -> "Prima vittoria! Gioca liberamente \uD83C\uDF89"
+                else -> "첫 클리어! 이제 자유롭게 플레이하세요 \uD83C\uDF89"
+            }
+            Toast.makeText(this, toastMsg, Toast.LENGTH_LONG).show()
+        }
+
+        // HUD 아래 영역에서 중앙 정렬
+        hud.post {
+            val lp = victoryOverlay.layoutParams as FrameLayout.LayoutParams
+            lp.topMargin = hud.height
+            victoryOverlay.requestLayout()
+        }
 
         victoryOverlay.visibility = View.VISIBLE
     }
 
     private fun updatePersonalStats() {
+        if (isGuide) return  // 가이드 게임 기록은 저장하지 않음
         // 전체 통계
         val wins = statsPrefs.getInt("wins", 0) + 1
         val total = statsPrefs.getInt("totalGames", 0) + 1
@@ -601,6 +657,9 @@ class GameActivity : AppCompatActivity() {
                 val (ok, rank) = ApiClient.submitRanking(
                     nick, gs.start, gs.goal, gs.elapsed, gs.hops, gs.path, gs.difficulty, gs.wiki)
                 runOnUiThread {
+                    // 키보드 숨기기
+                    val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.hideSoftInputFromWindow(etNickname.windowToken, 0)
                     etNickname.visibility = View.GONE; btnSubmitRank.visibility = View.GONE
                     tvRankResult.visibility = View.VISIBLE
                     tvRankResult.text = when { ok && rank != null -> "🏆 ${rank}위로 등록됐어요!"; ok -> "등록 완료!"; else -> "등록 실패" }
@@ -658,6 +717,9 @@ class GameActivity : AppCompatActivity() {
             "ja" -> arrayOf("ギブアップしますか？", "ギブアップ", "ゴールページへ", "続ける")
             "de" -> arrayOf("Aufgeben?", "Aufgeben", "Zur Zielseite", "Weiterspielen")
             "fr" -> arrayOf("Abandonner ?", "Abandonner", "Aller à la cible", "Continuer")
+            "es" -> arrayOf("¿Rendirse?", "Rendirse", "Ir a la página objetivo", "Seguir jugando")
+            "pt" -> arrayOf("Desistir?", "Desistir", "Ir para a página alvo", "Continuar jogando")
+            "it" -> arrayOf("Arrendersi?", "Arrendersi", "Vai alla pagina obiettivo", "Continua a giocare")
             else -> arrayOf("게임을 포기할까요?", "포기", "목적 페이지로 이동", "계속하기")
         }
         AlertDialog.Builder(this)
@@ -677,6 +739,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun recordGiveUp() {
+        if (isGuide) return  // 가이드 게임 기록은 저장하지 않음
         val prefix = "s_${gameState.wiki}_${gameState.difficulty}_"
         statsPrefs.edit()
             .putInt("totalGames", statsPrefs.getInt("totalGames", 0) + 1)
@@ -707,6 +770,36 @@ class GameActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private var guideBanner: TextView? = null
+
+    private fun showGuideHint() {
+        val goalName = gameState.goal
+        val hintText = when (gameLang) {
+            "en" -> "Find and tap the '$goalName' link! \uD83D\uDC49"
+            "ja" -> "「$goalName」リンクを探してタップ！ \uD83D\uDC49"
+            "de" -> "Finde und tippe auf den '$goalName'-Link! \uD83D\uDC49"
+            "fr" -> "Trouvez et appuyez sur le lien '$goalName' ! \uD83D\uDC49"
+            "es" -> "¡Busca y toca el enlace '$goalName'! \uD83D\uDC49"
+            "pt" -> "Encontre e toque no link '$goalName'! \uD83D\uDC49"
+            "it" -> "Trova e tocca il link '$goalName'! \uD83D\uDC49"
+            else -> "'$goalName' 링크를 찾아서 눌러보세요! \uD83D\uDC49"
+        }
+        val dp = resources.displayMetrics.density
+        guideBanner = TextView(this).apply {
+            text = hintText
+            textSize = 13f
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0xDD3B82F6.toInt())
+            gravity = android.view.Gravity.CENTER
+            setPadding((12 * dp).toInt(), (10 * dp).toInt(), (12 * dp).toInt(), (10 * dp).toInt())
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply { gravity = android.view.Gravity.BOTTOM }
+        }
+        (findViewById<FrameLayout>(android.R.id.content).getChildAt(0) as FrameLayout).addView(guideBanner)
     }
 
     override fun onDestroy() {

@@ -10,7 +10,7 @@ android {
         applicationId = "com.linkyrun.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.play.services.ads)
     implementation(libs.androidx.coordinatorlayout.ext)
+    implementation("androidx.core:core-splashscreen:1.0.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

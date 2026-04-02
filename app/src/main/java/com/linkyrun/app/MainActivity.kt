@@ -1,5 +1,7 @@
 package com.linkyrun.app
 
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Typeface
@@ -7,12 +9,14 @@ import android.os.Bundle
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.*
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.MobileAds
@@ -126,7 +130,49 @@ class MainActivity : AppCompatActivity() {
             "500+ liens","120+ liens","40+ liens","10+ liens",
             "🌐 Langue","Appuyer pour changer →","← Retour",
             "Aucun résultat",
-            "📅 Quotidien","🟢 Facile","🟡 Moyen","🔴 Difficile","💀 Très difficile","clics")
+            "📅 Quotidien","🟢 Facile","🟡 Moyen","🔴 Difficile","💀 Très difficile","clics"),
+
+        "es" to LangConfig("es","🇪🇸 Wikipedia español","es",
+            "Haz clic en los enlaces para llegar a la meta","Cómo jugar",
+            "1. Elige la dificultad → se asignan páginas de inicio y meta",
+            "2. Solo haz clic en enlaces internos para navegar",
+            "3. ¡Llega a la meta en el menor tiempo y clics!",
+            "4. Sin retroceso · Sin búsqueda · Sin enlaces externos",
+            "Empezar  ▶","Mis stats 📊","Clasificación 🏆",
+            "Desafío diario","📅 Empezar desafío diario",
+            "Dificultad","Fácil","Medio","Difícil","Muy difícil",
+            "500+ enlaces","120+ enlaces","40+ enlaces","10+ enlaces",
+            "🌐 Idioma","Toca para cambiar →","← Volver",
+            "Sin registros",
+            "📅 Diario","🟢 Fácil","🟡 Medio","🔴 Difícil","💀 Muy difícil","clics"),
+
+        "pt" to LangConfig("pt","🇵🇹 Wikipédia português","pt",
+            "Clique nos links para chegar à meta","Como jogar",
+            "1. Escolha a dificuldade → páginas de início e meta são atribuídas",
+            "2. Clique apenas em links internos para navegar",
+            "3. Chegue à meta no menor tempo e cliques!",
+            "4. Sem voltar · Sem busca · Sem links externos",
+            "Começar  ▶","Minhas stats 📊","Ranking 🏆",
+            "Desafio diário","📅 Começar desafio diário",
+            "Dificuldade","Fácil","Médio","Difícil","Muito difícil",
+            "500+ links","120+ links","40+ links","10+ links",
+            "🌐 Idioma","Toque para mudar →","← Voltar",
+            "Sem registros",
+            "📅 Diário","🟢 Fácil","🟡 Médio","🔴 Difícil","💀 Muito difícil","cliques"),
+
+        "it" to LangConfig("it","🇮🇹 Wikipedia italiano","it",
+            "Clicca i link per raggiungere l'obiettivo","Come giocare",
+            "1. Scegli la difficoltà → pagine di partenza e obiettivo assegnate",
+            "2. Clicca solo sui link interni per navigare",
+            "3. Raggiungi l'obiettivo nel minor tempo e clic!",
+            "4. Niente indietro · Niente ricerca · Niente link esterni",
+            "Inizia  ▶","Le mie stats 📊","Classifica 🏆",
+            "Sfida giornaliera","📅 Inizia sfida giornaliera",
+            "Difficoltà","Facile","Medio","Difficile","Molto difficile",
+            "500+ link","120+ link","40+ link","10+ link",
+            "🌐 Lingua","Tocca per cambiare →","← Indietro",
+            "Nessun risultato",
+            "📅 Giornaliero","🟢 Facile","🟡 Medio","🔴 Difficile","💀 Molto difficile","clic")
     )
 
     private lateinit var prefs: SharedPreferences
@@ -164,6 +210,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -206,10 +253,36 @@ class MainActivity : AppCompatActivity() {
         applyLang()
         loadDaily()
         showOnboardingIfNeeded()
+        setupGuidePulse()
 
         // 다시하기로 돌아온 경우 난이도 선택 화면 바로 표시
         if (intent.getBooleanExtra("show_difficulty", false)) {
             showScreen(screenDiff)
+        }
+    }
+
+    private var pulseAnimator: ObjectAnimator? = null
+
+    private fun setupGuidePulse() {
+        val btn = findViewById<Button>(R.id.btnGoStart)
+        if (!statsPrefs.getBoolean("guide_done", false)) {
+            pulseAnimator = ObjectAnimator.ofFloat(btn, "alpha", 1f, 0.4f).apply {
+                duration = 800
+                repeatMode = ValueAnimator.REVERSE
+                repeatCount = ValueAnimator.INFINITE
+                interpolator = AccelerateDecelerateInterpolator()
+                start()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 가이드 완료 후 돌아오면 펄스 제거
+        if (statsPrefs.getBoolean("guide_done", false) && pulseAnimator != null) {
+            pulseAnimator?.cancel()
+            findViewById<Button>(R.id.btnGoStart).alpha = 1f
+            pulseAnimator = null
         }
     }
 
@@ -244,7 +317,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnDiffBack).text = cfg.btnBack
         // 랭킹 화면 타이틀
         val rankingTitle = when (currentLang) {
-            "en" -> "🏆 Ranking"; "ja" -> "🏆 ランキング"; "de" -> "🏆 Rangliste"; "fr" -> "🏆 Classement"; else -> "🏆 랭킹"
+            "en" -> "🏆 Ranking"; "ja" -> "🏆 ランキング"; "de" -> "🏆 Rangliste"; "fr" -> "🏆 Classement"
+            "es" -> "🏆 Clasificación"; "pt" -> "🏆 Ranking"; "it" -> "🏆 Classifica"; else -> "🏆 랭킹"
         }
         findViewById<TextView>(R.id.tvRankingTitle).text = rankingTitle
         // 랭킹 탭
@@ -254,9 +328,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.lbTabHard).text = cfg.rankTabHard
         findViewById<Button>(R.id.lbTabVeryHard).text = cfg.rankTabVeryHard
         // 내기록 화면
-        val statsLabel = when (currentLang) { "en" -> "My Stats 📊"; "ja" -> "記録 📊"; "de" -> "Meine Stats 📊"; "fr" -> "Mes stats 📊"; else -> "내 기록 📊" }
-        val allLabel = when (currentLang) { "en" -> "All"; "ja" -> "全て"; "de" -> "Alle"; "fr" -> "Tout"; else -> "전체" }
-        val resetLabel = when (currentLang) { "en" -> "Reset"; "ja" -> "リセット"; "de" -> "Zurücksetzen"; "fr" -> "Réinitialiser"; else -> "초기화" }
+        val statsLabel = when (currentLang) { "en" -> "My Stats 📊"; "ja" -> "記録 📊"; "de" -> "Meine Stats 📊"; "fr" -> "Mes stats 📊"; "es" -> "Mis stats 📊"; "pt" -> "Minhas stats 📊"; "it" -> "Le mie stats 📊"; else -> "내 기록 📊" }
+        val allLabel = when (currentLang) { "en" -> "All"; "ja" -> "全て"; "de" -> "Alle"; "fr" -> "Tout"; "es" -> "Todo"; "pt" -> "Tudo"; "it" -> "Tutto"; else -> "전체" }
+        val resetLabel = when (currentLang) { "en" -> "Reset"; "ja" -> "リセット"; "de" -> "Zurücksetzen"; "fr" -> "Réinitialiser"; "es" -> "Restablecer"; "pt" -> "Redefinir"; "it" -> "Ripristina"; else -> "초기화" }
         findViewById<TextView>(R.id.tvStatsTitle).text = statsLabel
         findViewById<Button>(R.id.statsTabAll).text = allLabel
         findViewById<Button>(R.id.statsTabDaily).text = cfg.rankTabDaily
@@ -273,7 +347,13 @@ class MainActivity : AppCompatActivity() {
 
         // 인트로 화면
         findViewById<Button>(R.id.btnInfo).setOnClickListener { showOnboarding(showDontAsk = false) }
-        findViewById<Button>(R.id.btnGoStart).setOnClickListener { showScreen(screenDiff) }
+        findViewById<Button>(R.id.btnGoStart).setOnClickListener {
+            if (!statsPrefs.getBoolean("guide_done", false)) {
+                launchGuideGame()
+            } else {
+                showScreen(screenDiff)
+            }
+        }
         findViewById<Button>(R.id.btnStats).setOnClickListener { showStats() }
         findViewById<Button>(R.id.btnRanking).setOnClickListener { showRanking() }
         findViewById<View>(R.id.dailyCard).setOnClickListener { dailyInfo?.let { launchGame(it) } }
@@ -304,9 +384,12 @@ class MainActivity : AppCompatActivity() {
                 "ja" -> arrayOf("リセット", "リセット", "リセットしました")
                 "de" -> arrayOf("Statistiken zurücksetzen", "Zurücksetzen", "Zurückgesetzt!")
                 "fr" -> arrayOf("Réinitialiser", "Réinitialiser", "Réinitialisées !")
+                "es" -> arrayOf("Restablecer", "Restablecer", "¡Restablecido!")
+                "pt" -> arrayOf("Redefinir", "Redefinir", "Redefinido!")
+                "it" -> arrayOf("Ripristina", "Ripristina", "Ripristinato!")
                 else -> arrayOf("초기화", "초기화", "초기화됐습니다")
             }
-            val cancelLabel = when (currentLang) { "en" -> "Cancel"; "ja" -> "キャンセル"; "de" -> "Abbrechen"; "fr" -> "Annuler"; else -> "취소" }
+            val cancelLabel = when (currentLang) { "en" -> "Cancel"; "ja" -> "キャンセル"; "de" -> "Abbrechen"; "fr" -> "Annuler"; "es" -> "Cancelar"; "pt" -> "Cancelar"; "it" -> "Annulla"; else -> "취소" }
             AlertDialog.Builder(this)
                 .setTitle(confirmTitle)
                 .setPositiveButton(confirmOk) { _, _ ->
@@ -373,6 +456,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun launchGuideGame() {
+        val (start, goal, wiki) = when (currentLang) {
+            "en" -> Triple("Cat", "Egypt", "en")
+            "ja" -> Triple("ネコ", "エジプト", "ja")
+            "de" -> Triple("Hauskatze", "Ägypten", "de")
+            "fr" -> Triple("Chat", "Égypte", "fr")
+            "es" -> Triple("Gato", "Egipto", "es")
+            "pt" -> Triple("Gato", "Egito", "pt")
+            "it" -> Triple("Gatto", "Egitto", "it")
+            "ko" -> Triple("고양이", "이집트", "ko")
+            else -> Triple("고양이", "이집트", "namu")
+        }
+        val intent = Intent(this, GameActivity::class.java).apply {
+            putExtra(GameActivity.EXTRA_START, start)
+            putExtra(GameActivity.EXTRA_GOAL, goal)
+            putExtra(GameActivity.EXTRA_DIFFICULTY, "guide")
+            putExtra(GameActivity.EXTRA_WIKI, wiki)
+            putExtra(GameActivity.EXTRA_IS_GUIDE, true)
+        }
+        startActivity(intent)
+    }
+
     private fun launchGame(info: ApiClient.GameInfo) {
         val intent = Intent(this, GameActivity::class.java).apply {
             putExtra(GameActivity.EXTRA_START, info.start)
@@ -398,7 +503,8 @@ class MainActivity : AppCompatActivity() {
         val wikiEntries = listOf(
             "namu" to "🌲 나무", "ko" to "🇰🇷 위키",
             "en" to "🇺🇸 EN", "ja" to "🇯🇵 JA",
-            "de" to "🇩🇪 DE", "fr" to "🇫🇷 FR"
+            "de" to "🇩🇪 DE", "fr" to "🇫🇷 FR",
+            "es" to "🇪🇸 ES", "pt" to "🇵🇹 PT", "it" to "🇮🇹 IT"
         )
         val dp = resources.displayMetrics.density
         wikiEntries.forEach { (wiki, label) ->
@@ -449,6 +555,9 @@ class MainActivity : AppCompatActivity() {
             "ja" -> arrayOf("記録", "合計", "勝利", "連勝中", "最高連勝", "ベストタイム", "最少クリック", "OK", "リセット", "リセットしました")
             "de" -> arrayOf("Meine Stats", "Spiele", "Siege", "Aktuelle Serie", "Beste Serie", "Bestzeit", "Wenigste Klicks", "OK", "Zurücksetzen", "Zurückgesetzt!")
             "fr" -> arrayOf("Mes stats", "Parties", "Victoires", "Série en cours", "Meilleure série", "Meilleur temps", "Moins de clics", "OK", "Réinitialiser", "Réinitialisées !")
+            "es" -> arrayOf("Mis stats", "Partidas", "Victorias", "Racha actual", "Mejor racha", "Mejor tiempo", "Menos clics", "OK", "Restablecer", "¡Restablecido!")
+            "pt" -> arrayOf("Minhas stats", "Total de jogos", "Vitórias", "Sequência atual", "Melhor sequência", "Melhor tempo", "Menos cliques", "OK", "Redefinir", "Redefinido!")
+            "it" -> arrayOf("Le mie stats", "Partite totali", "Vittorie", "Serie attuale", "Miglior serie", "Miglior tempo", "Meno clic", "OK", "Ripristina", "Ripristinato!")
             else -> arrayOf("내 기록", "총 게임", "승리", "현재 연승", "최고 연승", "최고 기록", "최소 이동", "확인", "초기화", "초기화됐습니다")
         }
         val cfg = LANGS[currentLang] ?: LANGS["namu"]!!
@@ -529,7 +638,8 @@ class MainActivity : AppCompatActivity() {
         val wikiEntries = listOf(
             "namu" to "🌲 나무", "ko" to "🇰🇷 위키",
             "en" to "🇺🇸 EN", "ja" to "🇯🇵 JA",
-            "de" to "🇩🇪 DE", "fr" to "🇫🇷 FR"
+            "de" to "🇩🇪 DE", "fr" to "🇫🇷 FR",
+            "es" to "🇪🇸 ES", "pt" to "🇵🇹 PT", "it" to "🇮🇹 IT"
         )
         val dp = resources.displayMetrics.density
         wikiEntries.forEach { (wiki, label) ->
@@ -680,6 +790,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showOnboardingIfNeeded() {
         if (prefs.getBoolean("onboarding_done", false)) return
+        if (statsPrefs.getBoolean("guide_done", false)) return
         showOnboarding(showDontAsk = true)
     }
 
@@ -707,15 +818,40 @@ class MainActivity : AppCompatActivity() {
                 "Changez la langue pour jouer avec différentes Wikipédia !",
                 "C'est parti !", "Ne plus afficher"
             )
+            "es" -> arrayOf(
+                "🔗 ¡Bienvenido a Linky Run!",
+                "¡Cambia el idioma para jugar con diferentes ediciones de Wikipedia!",
+                "¡Vamos!", "No mostrar de nuevo"
+            )
+            "pt" -> arrayOf(
+                "🔗 Bem-vindo ao Linky Run!",
+                "Mude o idioma para jogar com diferentes edições da Wikipédia!",
+                "Vamos!", "Não mostrar novamente"
+            )
+            "it" -> arrayOf(
+                "🔗 Benvenuto su Linky Run!",
+                "Cambia la lingua per giocare con diverse edizioni di Wikipedia!",
+                "Iniziamo!", "Non mostrare più"
+            )
             else -> arrayOf(
                 "🔗 Linky Run 에 오신 걸 환영해요!",
                 "언어를 바꾸면 해당 나라의 위키피디아로 게임을 즐길 수 있어요.",
                 "시작하기!", "다시 보지 않기"
             )
         }
+        val example = when (currentLang) {
+            "en" -> "e.g. Navigate from 'Cat' to 'Egypt' by clicking links only"
+            "ja" -> "例：「ネコ」から「エジプト」までリンクだけをクリックして移動"
+            "de" -> "z.B. Navigiere von 'Hauskatze' zu 'Ägypten' nur durch Klicken auf Links"
+            "fr" -> "ex : Naviguez de 'Chat' à 'Égypte' en cliquant uniquement sur des liens"
+            "es" -> "ej: Navega de 'Gato' a 'Egipto' haciendo clic solo en enlaces"
+            "pt" -> "ex: Navegue de 'Gato' a 'Egito' clicando apenas em links"
+            "it" -> "es: Naviga da 'Gatto' a 'Egitto' cliccando solo sui link"
+            else -> "예: '고양이' 페이지에서 '이집트' 페이지까지 링크만 클릭해서 이동"
+        }
         val builder = AlertDialog.Builder(this)
             .setTitle(title)
-            .setMessage("📖 ${cfg.howToPlay}\n\n$rules\n\n$extra")
+            .setMessage("📖 ${cfg.howToPlay}\n\n$rules\n\n$extra\n\n$example")
             .setPositiveButton(btnOk, null)  // OK: 다시 보지 않기 없이 그냥 닫기
             .setCancelable(false)
         if (showDontAsk) {
