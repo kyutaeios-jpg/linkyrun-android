@@ -648,6 +648,20 @@ class GameActivity : AppCompatActivity() {
             btnGiveUp.text = getCloseText()
         }
 
+        // 키패드가 올라오면 화면을 밀어올려서 닉네임 입력부 노출
+        val rootView = findViewById<View>(android.R.id.content)
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            val rect = android.graphics.Rect()
+            rootView.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = rootView.rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+            if (keypadHeight > screenHeight * 0.15) {
+                victoryOverlay.translationY = -keypadHeight.toFloat() * 0.5f
+            } else {
+                victoryOverlay.translationY = 0f
+            }
+        }
+
         btnSubmitRank.setOnClickListener {
             val nick = etNickname.text.toString().trim()
             if (nick.isEmpty()) { etNickname.error = "닉네임 입력"; return@setOnClickListener }
