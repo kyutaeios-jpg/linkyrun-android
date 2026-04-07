@@ -669,7 +669,7 @@ class GameActivity : AppCompatActivity() {
             val gs = gameState
             thread {
                 val (ok, rank) = ApiClient.submitRanking(
-                    nick, gs.start, gs.goal, gs.elapsed, gs.hops, gs.path, gs.difficulty, gs.wiki)
+                    nick, gs.start, gs.goal, gs.elapsed, gs.hops, gs.path, gs.difficulty, gs.wiki, gs.dayNum)
                 runOnUiThread {
                     // 키보드 숨기기
                     val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager

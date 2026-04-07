@@ -85,7 +85,8 @@ object ApiClient {
         hops: Int,
         path: List<String>,
         difficulty: String,
-        wiki: String = "namu"
+        wiki: String = "namu",
+        dayNum: Int? = null
     ): Pair<Boolean, Int?> { // (success, rank)
         return try {
             val json = JSONObject().apply {
@@ -97,6 +98,7 @@ object ApiClient {
                 put("path", org.json.JSONArray(path))
                 put("difficulty", difficulty)
                 put("wiki", wiki)
+                if (dayNum != null) put("day_num", dayNum)
             }
             val body = json.toString().toRequestBody("application/json".toMediaType())
             val req = Request.Builder()
