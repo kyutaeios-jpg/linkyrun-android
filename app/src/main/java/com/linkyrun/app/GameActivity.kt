@@ -15,6 +15,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import java.net.URLDecoder
 import java.net.URLEncoder
 import kotlin.concurrent.thread
@@ -145,6 +150,7 @@ class GameActivity : AppCompatActivity() {
     private lateinit var hudCenter: View
     private lateinit var pageLoadingOverlay: View
 
+    private var interstitialAd: InterstitialAd? = null
     private var lastProgrammaticUrl: String? = null
     private var pendingVictory = false
     private var gameCompleted = false
@@ -203,6 +209,7 @@ class GameActivity : AppCompatActivity() {
         setupWebView()
         setupButtons()
         syncHUD()
+        loadInterstitialAd()
 
         webView.loadUrl(buildWikiUrl(start, wiki))
         showStartPopup()
@@ -681,18 +688,20 @@ class GameActivity : AppCompatActivity() {
             }
         }
 
-        // 다시하기: 같은 위키의 난이도 선택 화면으로
+        // 다시하기: 전면 광고 → 같은 위키의 난이도 선택 화면으로
         btnPlayAgain.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java).apply {
-                putExtra("show_difficulty", true)
-                putExtra("wiki", gameState.wiki)
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+            showInterstitialThen {
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    putExtra("show_difficulty", true)
+                    putExtra("wiki", gameState.wiki)
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                startActivity(intent)
+                finish()
             }
-            startActivity(intent)
-            finish()
         }
-        // 홈으로: 앱 첫 화면으로
-        btnGoHome.setOnClickListener { finish() }
+        // 홈으로: 전면 광고 → 앱 첫 화면으로
+        btnGoHome.setOnClickListener { showInterstitialThen { finish() } }
         btnShare.setOnClickListener { shareResult() }
         btnChallenge.setOnClickListener { sendChallenge() }
     }
@@ -814,6 +823,27 @@ class GameActivity : AppCompatActivity() {
             ).apply { gravity = android.view.Gravity.BOTTOM }
         }
         (findViewById<FrameLayout>(android.R.id.content).getChildAt(0) as FrameLayout).addView(guideBanner)
+    }
+
+    private fun loadInterstitialAd() {
+        InterstitialAd.load(this, "ca-app-pub-4723026681968956/9463382111",
+            AdRequest.Builder().build(), object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: InterstitialAd) { interstitialAd = ad }
+                override fun onAdFailedToLoad(err: LoadAdError) { interstitialAd = null }
+            })
+    }
+
+    private fun showInterstitialThen(action: () -> Unit) {
+        val ad = interstitialAd
+        if (ad != null) {
+            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() { interstitialAd = null; action() }
+                override fun onAdFailedToShowFullScreenContent(err: com.google.android.gms.ads.AdError) { interstitialAd = null; action() }
+            }
+            ad.show(this)
+        } else {
+            action()
+        }
     }
 
     override fun onDestroy() {

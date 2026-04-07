@@ -259,6 +259,39 @@ class MainActivity : AppCompatActivity() {
         if (intent.getBooleanExtra("show_difficulty", false)) {
             showScreen(screenDiff)
         }
+
+        // 딥링크: /go/CODE → 도전장 게임 시작
+        handleDeepLink(intent)
+    }
+
+    private fun handleDeepLink(intent: Intent) {
+        val data = intent.data ?: return
+        val path = data.path ?: return
+        if (!path.startsWith("/go/")) return
+        val code = path.removePrefix("/go/").takeIf { it.isNotEmpty() } ?: return
+        loadingOverlay.visibility = View.VISIBLE
+        thread {
+            try {
+                val req = okhttp3.Request.Builder()
+                    .url("https://linkyrun.com/api/challenge/$code")
+                    .build()
+                val body = okhttp3.OkHttpClient().newCall(req).execute().body?.string() ?: return@thread
+                val j = org.json.JSONObject(body)
+                if (j.has("error")) return@thread
+                val info = ApiClient.GameInfo(
+                    start = j.getString("start"),
+                    goal = j.getString("goal"),
+                    difficulty = "custom",
+                    wiki = j.optString("wiki", "namu")
+                )
+                runOnUiThread {
+                    loadingOverlay.visibility = View.GONE
+                    launchGame(info)
+                }
+            } catch (_: Exception) {
+                runOnUiThread { loadingOverlay.visibility = View.GONE }
+            }
+        }
     }
 
     private var pulseAnimator: ObjectAnimator? = null
@@ -785,6 +818,21 @@ class MainActivity : AppCompatActivity() {
             })
         }
         row.addView(center)
+        // 랭킹 항목 클릭 → 같은 출발/목표로 도전
+        row.setOnClickListener {
+            val start = entry.start.ifEmpty { entry.path.firstOrNull() ?: return@setOnClickListener }
+            val goal = entry.goal.ifEmpty { entry.path.lastOrNull() ?: return@setOnClickListener }
+            val cfg = LANGS[currentLang] ?: LANGS["namu"]!!
+            val record = "⏱ ${fmtTime(entry.elapsedMs)}  🔗 ${entry.hops} ${cfg.hopsUnit}  (${entry.nickname})"
+            AlertDialog.Builder(this)
+                .setTitle("도전하기")
+                .setMessage("$start → $goal\n\n$record")
+                .setPositiveButton("도전 시작 ▶") { _, _ ->
+                    launchGame(ApiClient.GameInfo(start, goal, "custom", lbCurrentWiki))
+                }
+                .setNegativeButton("취소", null)
+                .show()
+        }
         return row
     }
 

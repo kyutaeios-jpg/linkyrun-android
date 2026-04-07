@@ -142,7 +142,7 @@ object ApiClient {
             val req = Request.Builder().url("$BASE_URL/api/challenge").post(body).build()
             val d = JSONObject(client.newCall(req).execute().body?.string() ?: "{}")
             val code = d.optString("code", "")
-            if (code.isNotEmpty()) "$BASE_URL/?c=$code" else null
+            if (code.isNotEmpty()) "$BASE_URL/go/$code" else null
         } catch (e: Exception) { null }
     }
 
