@@ -312,7 +312,7 @@ class GameActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 pageLoadingOverlay.visibility = View.GONE
-                view.clearHistory()  // 뒤로가기 히스토리 누적 방지
+                // 뒤로가기는 OnBackPressedCallback에서 처리하므로 clearHistory 불필요
 
                 // ★ 페이지 로드 완료마다 JS 재주입 (SPA 네비게이션 대응)
                 val js = if (gameState.wiki == "namu") NAMU_INJECT_JS else WIKI_INJECT_JS
@@ -336,7 +336,7 @@ class GameActivity : AppCompatActivity() {
                 }
             }
 
-                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                 val url = request.url.toString()
                 // 검색 URL 차단
                 if (url.contains("/search") || url.contains("Special:Search") || url.contains("action=search") || url.contains("search=")) {
@@ -409,10 +409,13 @@ class GameActivity : AppCompatActivity() {
 
     private fun isGoal(title: String, goal: String): Boolean {
         val nt = normalize(title); val ng = normalize(goal)
+        // Layer 1: 직접 일치
         if (nt == ng) return true
+        // Layer 2: 괄호 제거 후 비교 (동음이의어 구분자)
         val st = stripParen(nt); val sg = stripParen(ng)
         if (st.isNotEmpty() && sg.isNotEmpty() && st == sg) return true
-        if (nt.length >= 4 && ng.length >= 4 && similarity(nt, ng) >= 0.88) return true
+        // Layer 3: 유사도 매칭 (0.92 이상, 양쪽 모두 6자 이상 — 서버와 동일)
+        if (nt.length >= 6 && ng.length >= 6 && similarity(nt, ng) >= 0.92) return true
         return false
     }
 
@@ -445,116 +448,79 @@ class GameActivity : AppCompatActivity() {
         return if (m > 0) "%02d:%02d".format(m, ss) else "%02d.%02d".format(ss, cs)
     }
 
+    // ── 게임 화면 다국어 문자열 (중앙 관리) ──────────────────────
+    private data class GameStrings(
+        val goalLabel: String, val giveUp: String, val victoryTitle: String,
+        val timeLabel: String, val hopsLabel: String, val pathLabel: String,
+        val rankTitle: String, val nickHint: String, val submit: String,
+        val playAgain: String, val home: String, val readPage: String,
+        val hopsUnit: String, val close: String,
+        val popupTitle: String, val popupGoalLabel: String, val popupRulesLabel: String,
+        val popupRules: String, val popupStart: String,
+        // 포기 다이얼로그
+        val giveUpQ: String, val giveUpYes: String, val giveUpGoal: String, val giveUpKeep: String,
+        // 제출/결과
+        val nickError: String, val submitting: String, val rankOk: String, val rankFail: String,
+        // 도전장/가이드
+        val challengeCopied: String, val guideToast: String,
+        val guideHint: (String) -> String
+    )
+
+    private val GAME_STRINGS = mapOf(
+        "en" to GameStrings("GOAL ▾","Quit","🎉  Arrived!","TIME","HOPS","PATH","Submit Score","Enter nickname","Submit","Play Again","Home","📖 Read","hops","Close",
+            "Ready?","Goal:","Rules","1. Click internal links only to navigate\n2. Reach the goal in fewest hops!\n3. No back button · No search · No external links","Start!",
+            "Give up?","Give Up","Go to Goal Page","Keep Playing","Enter nickname","Submitting…","Submitted!","Submission failed","Challenge copied!","First clear! Now play freely 🎉",{g->"Find and tap the '$g' link! 👉"}),
+        "ja" to GameStrings("ゴール ▾","やめる","🎉  ゴール！","タイム","クリック","ルート","記録登録","ニックネームを入力","登録","もう一回","ホーム","📖 読む","クリック","閉じる",
+            "準備はいいですか？","ゴール:","ルール","1. 内部リンクのみクリック\n2. 最少クリックでゴール！\n3. 戻るボタン・検索・外部リンク禁止","スタート！",
+            "ギブアップしますか？","ギブアップ","ゴールページへ","続ける","ニックネーム入力","登録中…","登録完了！","登録失敗","コピーしました！","初クリア！自由にプレイしよう 🎉",{g->"「$g」リンクを探してタップ！ 👉"}),
+        "de" to GameStrings("ZIEL ▾","Aufgeben","🎉  Geschafft!","ZEIT","KLICKS","ROUTE","Rangliste","Name eingeben","Eintragen","Nochmal","Start","📖 Lesen","Klicks","Schließen",
+            "Bereit?","Zielseite:","Regeln","1. Nur interne Links anklicken\n2. Ziel in wenigsten Klicks!\n3. Kein Zurück · Keine Suche · Keine externen Links","Start!",
+            "Aufgeben?","Aufgeben","Zur Zielseite","Weiterspielen","Name eingeben","Wird gesendet…","Eingetragen!","Fehler","Kopiert!","Erster Sieg! Jetzt frei spielen 🎉",{g->"Finde und tippe auf '$g'! 👉"}),
+        "fr" to GameStrings("BUT ▾","Abandonner","🎉  Arrivé !","TEMPS","CLICS","CHEMIN","Classement","Entrer un pseudo","Soumettre","Rejouer","Accueil","📖 Lire","clics","Fermer",
+            "Prêt(e) ?","Page cible :","Règles","1. Cliquer uniquement les liens internes\n2. Atteindre le but en moins de clics !\n3. Pas de retour · Pas de recherche · Pas de liens externes","C'est parti !",
+            "Abandonner ?","Abandonner","Aller à la cible","Continuer","Entrer un pseudo","Envoi…","Envoyé !","Échec","Copié !","Premier succès ! Jouez librement 🎉",{g->"Trouvez et appuyez sur '$g' ! 👉"}),
+        "es" to GameStrings("META ▾","Rendirse","🎉  ¡Llegaste!","TIEMPO","CLICS","RUTA","Enviar puntuación","Ingresa apodo","Enviar","Otra vez","Inicio","📖 Leer","clics","Cerrar",
+            "¿Listo?","Página objetivo:","Reglas","1. Solo haz clic en enlaces internos\n2. ¡Llega a la meta en menos clics!\n3. Sin retroceso · Sin búsqueda · Sin enlaces externos","¡Empezar!",
+            "¿Rendirse?","Rendirse","Ir a la página objetivo","Seguir jugando","Ingresa apodo","Enviando…","¡Enviado!","Error","¡Copiado!","¡Primera victoria! Juega libremente 🎉",{g->"¡Busca y toca '$g'! 👉"}),
+        "pt" to GameStrings("META ▾","Desistir","🎉  Chegou!","TEMPO","CLIQUES","ROTA","Enviar pontuação","Digite apelido","Enviar","Jogar de novo","Início","📖 Ler","cliques","Fechar",
+            "Pronto?","Página alvo:","Regras","1. Clique apenas em links internos\n2. Chegue ao destino com menos cliques!\n3. Sem voltar · Sem busca · Sem links externos","Começar!",
+            "Desistir?","Desistir","Ir para a página alvo","Continuar jogando","Digite apelido","Enviando…","Enviado!","Erro","Copiado!","Primeira vitória! Jogue livremente 🎉",{g->"Encontre e toque '$g'! 👉"}),
+        "it" to GameStrings("META ▾","Arrendersi","🎉  Arrivato!","TEMPO","CLIC","PERCORSO","Invia punteggio","Inserisci nickname","Invia","Rigioca","Home","📖 Leggi","clic","Chiudi",
+            "Pronto?","Pagina obiettivo:","Regole","1. Clicca solo sui link interni\n2. Raggiungi l'obiettivo con meno clic!\n3. Niente indietro · Niente ricerca · Niente link esterni","Inizia!",
+            "Arrendersi?","Arrendersi","Vai alla pagina obiettivo","Continua a giocare","Inserisci nickname","Invio…","Inviato!","Errore","Copiato!","Prima vittoria! Gioca liberamente 🎉",{g->"Trova e tocca '$g'! 👉"}),
+    )
+    private val DEFAULT_STRINGS = GameStrings("목표 ▾","포기","🎉  도착!","시간","이동","경로","랭킹 등록","닉네임 입력","랭킹 등록","다시 하기","홈으로","📖 읽기","홉","닫기",
+        "준비됐나요?","목적 페이지:","게임 방법","1. 내부 링크만 클릭해서 목표 페이지까지 이동\n2. 최단 시간 · 최소 클릭으로 도달하면 승리!\n3. 뒤로 가기 · 검색 · 외부 링크 사용 금지","시작!",
+        "게임을 포기할까요?","포기","목적 페이지로 이동","계속하기","닉네임 입력","등록 중…","등록 완료!","등록 실패","도전장이 복사됐어요!","첫 클리어! 이제 자유롭게 플레이하세요 🎉",{g->"'$g' 링크를 찾아서 눌러보세요! 👉"})
+
+    private fun gs(): GameStrings = GAME_STRINGS[gameLang] ?: DEFAULT_STRINGS
+
     private fun applyGameLang() {
-        tvGoalLabel.text = when (gameLang) {
-            "en" -> "GOAL ▾"; "ja" -> "ゴール ▾"; "de" -> "ZIEL ▾"; "fr" -> "BUT ▾"
-            "es" -> "META ▾"; "pt" -> "META ▾"; "it" -> "META ▾"; else -> "목표 ▾"
-        }
-        btnGiveUp.text = when (gameLang) {
-            "en" -> "Quit"; "ja" -> "やめる"; "de" -> "Aufgeben"; "fr" -> "Abandonner"
-            "es" -> "Rendirse"; "pt" -> "Desistir"; "it" -> "Arrendersi"; else -> "포기"
-        }
-        tvVictoryTitle.text = when (gameLang) {
-            "en" -> "🎉  Arrived!"; "ja" -> "🎉  ゴール！"; "de" -> "🎉  Geschafft!"; "fr" -> "🎉  Arrivé !"
-            "es" -> "🎉  ¡Llegaste!"; "pt" -> "🎉  Chegou!"; "it" -> "🎉  Arrivato!"; else -> "🎉  도착!"
-        }
-        tvVictoryTimeLabel.text = when (gameLang) {
-            "en" -> "TIME"; "ja" -> "タイム"; "de" -> "ZEIT"; "fr" -> "TEMPS"
-            "es" -> "TIEMPO"; "pt" -> "TEMPO"; "it" -> "TEMPO"; else -> "시간"
-        }
-        tvVictoryHopsLabel.text = when (gameLang) {
-            "en" -> "HOPS"; "ja" -> "クリック"; "de" -> "KLICKS"; "fr" -> "CLICS"
-            "es" -> "CLICS"; "pt" -> "CLIQUES"; "it" -> "CLIC"; else -> "이동"
-        }
-        tvVictoryPathLabel.text = when (gameLang) {
-            "en" -> "PATH"; "ja" -> "ルート"; "de" -> "ROUTE"; "fr" -> "CHEMIN"
-            "es" -> "RUTA"; "pt" -> "ROTA"; "it" -> "PERCORSO"; else -> "경로"
-        }
-        tvRankTitle.text = when (gameLang) {
-            "en" -> "Submit Score"; "ja" -> "記録登録"; "de" -> "Rangliste"; "fr" -> "Classement"
-            "es" -> "Enviar puntuación"; "pt" -> "Enviar pontuação"; "it" -> "Invia punteggio"; else -> "랭킹 등록"
-        }
-        etNickname.hint = when (gameLang) {
-            "en" -> "Enter nickname"; "ja" -> "ニックネームを入力"; "de" -> "Name eingeben"; "fr" -> "Entrer un pseudo"
-            "es" -> "Ingresa apodo"; "pt" -> "Digite apelido"; "it" -> "Inserisci nickname"; else -> "닉네임 입력"
-        }
-        btnSubmitRank.text = when (gameLang) {
-            "en" -> "Submit"; "ja" -> "登録"; "de" -> "Eintragen"; "fr" -> "Soumettre"
-            "es" -> "Enviar"; "pt" -> "Enviar"; "it" -> "Invia"; else -> "랭킹 등록"
-        }
-        btnPlayAgain.text = when (gameLang) {
-            "en" -> "Play Again"; "ja" -> "もう一回"; "de" -> "Nochmal"; "fr" -> "Rejouer"
-            "es" -> "Otra vez"; "pt" -> "Jogar de novo"; "it" -> "Rigioca"; else -> "다시 하기"
-        }
-        btnGoHome.text = when (gameLang) {
-            "en" -> "Home"; "ja" -> "ホーム"; "de" -> "Start"; "fr" -> "Accueil"
-            "es" -> "Inicio"; "pt" -> "Início"; "it" -> "Home"; else -> "홈으로"
-        }
-        btnReadPage.text = getReadPageText()
+        val s = gs()
+        tvGoalLabel.text = s.goalLabel
+        btnGiveUp.text = s.giveUp
+        tvVictoryTitle.text = s.victoryTitle
+        tvVictoryTimeLabel.text = s.timeLabel
+        tvVictoryHopsLabel.text = s.hopsLabel
+        tvVictoryPathLabel.text = s.pathLabel
+        tvRankTitle.text = s.rankTitle
+        etNickname.hint = s.nickHint
+        btnSubmitRank.text = s.submit
+        btnPlayAgain.text = s.playAgain
+        btnGoHome.text = s.home
+        btnReadPage.text = s.readPage
     }
 
-    private fun getHopsUnit(): String = when (gameLang) {
-        "en" -> "hops"; "ja" -> "クリック"; "de" -> "Klicks"; "fr" -> "clics"
-        "es" -> "clics"; "pt" -> "cliques"; "it" -> "clic"; else -> "홉"
-    }
-
-    private fun getCloseText(): String = when (gameLang) {
-        "en" -> "Close"; "ja" -> "閉じる"; "de" -> "Schließen"; "fr" -> "Fermer"
-        "es" -> "Cerrar"; "pt" -> "Fechar"; "it" -> "Chiudi"; else -> "닫기"
-    }
-
-    private fun getReadPageText(): String = when (gameLang) {
-        "en" -> "📖 Read"; "ja" -> "📖 読む"; "de" -> "📖 Lesen"; "fr" -> "📖 Lire"
-        "es" -> "📖 Leer"; "pt" -> "📖 Ler"; "it" -> "📖 Leggi"; else -> "📖 읽기"
-    }
+    private fun getHopsUnit(): String = gs().hopsUnit
+    private fun getCloseText(): String = gs().close
+    private fun getReadPageText(): String = gs().readPage
 
     private fun showStartPopup() {
-        val (title, goalLabel, rulesLabel, rules, btnStart) = when (gameLang) {
-            "en" -> arrayOf(
-                "Ready?", "Goal:", "Rules",
-                "1. Click internal links only to navigate\n2. Reach the goal in fewest hops!\n3. No back button · No search · No external links",
-                "Start!"
-            )
-            "ja" -> arrayOf(
-                "準備はいいですか？", "ゴール:", "ルール",
-                "1. 内部リンクのみクリック\n2. 最少クリックでゴール！\n3. 戻るボタン・検索・外部リンク禁止",
-                "スタート！"
-            )
-            "de" -> arrayOf(
-                "Bereit?", "Zielseite:", "Regeln",
-                "1. Nur interne Links anklicken\n2. Ziel in wenigsten Klicks!\n3. Kein Zurück · Keine Suche · Keine externen Links",
-                "Start!"
-            )
-            "fr" -> arrayOf(
-                "Prêt(e) ?", "Page cible :", "Règles",
-                "1. Cliquer uniquement les liens internes\n2. Atteindre le but en moins de clics !\n3. Pas de retour · Pas de recherche · Pas de liens externes",
-                "C'est parti !"
-            )
-            "es" -> arrayOf(
-                "¿Listo?", "Página objetivo:", "Reglas",
-                "1. Solo haz clic en enlaces internos\n2. ¡Llega a la meta en menos clics!\n3. Sin retroceso · Sin búsqueda · Sin enlaces externos",
-                "¡Empezar!"
-            )
-            "pt" -> arrayOf(
-                "Pronto?", "Página alvo:", "Regras",
-                "1. Clique apenas em links internos\n2. Chegue ao destino com menos cliques!\n3. Sem voltar · Sem busca · Sem links externos",
-                "Começar!"
-            )
-            "it" -> arrayOf(
-                "Pronto?", "Pagina obiettivo:", "Regole",
-                "1. Clicca solo sui link interni\n2. Raggiungi l'obiettivo con meno clic!\n3. Niente indietro · Niente ricerca · Niente link esterni",
-                "Inizia!"
-            )
-            else -> arrayOf(
-                "준비됐나요?", "목적 페이지:", "게임 방법",
-                "1. 내부 링크만 클릭해서 목표 페이지까지 이동\n2. 최단 시간 · 최소 클릭으로 도달하면 승리!\n3. 뒤로 가기 · 검색 · 외부 링크 사용 금지",
-                "시작!"
-            )
-        }
+        val s = gs()
         AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage("$goalLabel  ${gameState.goal}\n\n$rulesLabel\n$rules")
-            .setPositiveButton(btnStart) { _, _ ->
+            .setTitle(s.popupTitle)
+            .setMessage("${s.popupGoalLabel}  ${gameState.goal}\n\n${s.popupRulesLabel}\n${s.popupRules}")
+            .setPositiveButton(s.popupStart) { _, _ ->
                 gameState.startTime = System.currentTimeMillis()
                 handler.post(timerRunnable)
             }
@@ -587,17 +553,7 @@ class GameActivity : AppCompatActivity() {
         if (isGuide) {
             guideBanner?.visibility = View.GONE
             statsPrefs.edit().putBoolean("guide_done", true).apply()
-            val toastMsg = when (gameLang) {
-                "en" -> "First clear! Now play freely \uD83C\uDF89"
-                "ja" -> "初クリア！自由にプレイしよう \uD83C\uDF89"
-                "de" -> "Erster Sieg! Jetzt frei spielen \uD83C\uDF89"
-                "fr" -> "Premier succès ! Jouez librement \uD83C\uDF89"
-                "es" -> "¡Primera victoria! Juega libremente \uD83C\uDF89"
-                "pt" -> "Primeira vitória! Jogue livremente \uD83C\uDF89"
-                "it" -> "Prima vittoria! Gioca liberamente \uD83C\uDF89"
-                else -> "첫 클리어! 이제 자유롭게 플레이하세요 \uD83C\uDF89"
-            }
-            Toast.makeText(this, toastMsg, Toast.LENGTH_LONG).show()
+            Toast.makeText(this, gs().guideToast, Toast.LENGTH_LONG).show()
         }
 
         // HUD 아래 영역에서 중앙 정렬
@@ -671,8 +627,8 @@ class GameActivity : AppCompatActivity() {
 
         btnSubmitRank.setOnClickListener {
             val nick = etNickname.text.toString().trim()
-            if (nick.isEmpty()) { etNickname.error = "닉네임 입력"; return@setOnClickListener }
-            btnSubmitRank.isEnabled = false; btnSubmitRank.text = "등록 중…"
+            if (nick.isEmpty()) { etNickname.error = gs().nickError; return@setOnClickListener }
+            btnSubmitRank.isEnabled = false; btnSubmitRank.text = gs().submitting
             val gs = gameState
             thread {
                 val (ok, rank) = ApiClient.submitRanking(
@@ -683,7 +639,8 @@ class GameActivity : AppCompatActivity() {
                     imm.hideSoftInputFromWindow(etNickname.windowToken, 0)
                     etNickname.visibility = View.GONE; btnSubmitRank.visibility = View.GONE
                     tvRankResult.visibility = View.VISIBLE
-                    tvRankResult.text = when { ok && rank != null -> "🏆 ${rank}위로 등록됐어요!"; ok -> "등록 완료!"; else -> "등록 실패" }
+                    val s = gs()
+                    tvRankResult.text = when { ok && rank != null -> "🏆 #$rank!"; ok -> s.rankOk; else -> s.rankFail }
                 }
             }
         }
@@ -735,21 +692,12 @@ class GameActivity : AppCompatActivity() {
     }
 
     private fun showGiveUpDialog() {
-        val (title, pos, neu, neg) = when (gameLang) {
-            "en" -> arrayOf("Give up?", "Give Up", "Go to Goal Page", "Keep Playing")
-            "ja" -> arrayOf("ギブアップしますか？", "ギブアップ", "ゴールページへ", "続ける")
-            "de" -> arrayOf("Aufgeben?", "Aufgeben", "Zur Zielseite", "Weiterspielen")
-            "fr" -> arrayOf("Abandonner ?", "Abandonner", "Aller à la cible", "Continuer")
-            "es" -> arrayOf("¿Rendirse?", "Rendirse", "Ir a la página objetivo", "Seguir jugando")
-            "pt" -> arrayOf("Desistir?", "Desistir", "Ir para a página alvo", "Continuar jogando")
-            "it" -> arrayOf("Arrendersi?", "Arrendersi", "Vai alla pagina obiettivo", "Continua a giocare")
-            else -> arrayOf("게임을 포기할까요?", "포기", "목적 페이지로 이동", "계속하기")
-        }
+        val s = gs()
         AlertDialog.Builder(this)
-            .setTitle(title)
+            .setTitle(s.giveUpQ)
             .setMessage("${gameState.start} → ${gameState.goal}")
-            .setPositiveButton(pos) { _, _ -> recordGiveUp(); finish() }
-            .setNeutralButton(neu) { _, _ ->
+            .setPositiveButton(s.giveUpYes) { _, _ -> recordGiveUp(); finish() }
+            .setNeutralButton(s.giveUpGoal) { _, _ ->
                 recordGiveUp()
                 gameState.active = false
                 handler.removeCallbacks(timerRunnable)
@@ -757,7 +705,7 @@ class GameActivity : AppCompatActivity() {
                 btnGiveUp.text = getCloseText()
                 webView.loadUrl(buildWikiUrl(gameState.goal, gameState.wiki))
             }
-            .setNegativeButton(neg, null)
+            .setNegativeButton(s.giveUpKeep, null)
             .show()
     }
 
@@ -781,13 +729,13 @@ class GameActivity : AppCompatActivity() {
         val gs = gameState
         thread {
             val url = ApiClient.createChallenge(gs.start, gs.goal, gs.wiki, gs.hops, gs.elapsed)
-                ?: "https://linkyrun.com/?start=${gs.start}&goal=${gs.goal}&wiki=${gs.wiki}"
+                ?: "https://linkyrun.com/?start=${URLEncoder.encode(gs.start,"UTF-8")}&goal=${URLEncoder.encode(gs.goal,"UTF-8")}&wiki=${URLEncoder.encode(gs.wiki,"UTF-8")}"
             val text = "Linky Run 도전장!\n${gs.start} → ${gs.goal}\n내 기록: ⏱ ${fmtTime(gs.elapsed)}  🔗 ${gs.hops}${getHopsUnit()}\n도전: $url"
             runOnUiThread {
                 try {
                     (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager)
                         .setPrimaryClip(ClipData.newPlainText("linkyrun", text))
-                    Toast.makeText(this, "도전장이 복사됐어요!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, gs().challengeCopied, Toast.LENGTH_SHORT).show()
                 } catch (_: Exception) {
                     startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="text/plain"; putExtra(Intent.EXTRA_TEXT, text) }, "도전장 보내기"))
                 }
@@ -798,17 +746,7 @@ class GameActivity : AppCompatActivity() {
     private var guideBanner: TextView? = null
 
     private fun showGuideHint() {
-        val goalName = gameState.goal
-        val hintText = when (gameLang) {
-            "en" -> "Find and tap the '$goalName' link! \uD83D\uDC49"
-            "ja" -> "「$goalName」リンクを探してタップ！ \uD83D\uDC49"
-            "de" -> "Finde und tippe auf den '$goalName'-Link! \uD83D\uDC49"
-            "fr" -> "Trouvez et appuyez sur le lien '$goalName' ! \uD83D\uDC49"
-            "es" -> "¡Busca y toca el enlace '$goalName'! \uD83D\uDC49"
-            "pt" -> "Encontre e toque no link '$goalName'! \uD83D\uDC49"
-            "it" -> "Trova e tocca il link '$goalName'! \uD83D\uDC49"
-            else -> "'$goalName' 링크를 찾아서 눌러보세요! \uD83D\uDC49"
-        }
+        val hintText = gs().guideHint(gameState.goal)
         val dp = resources.displayMetrics.density
         guideBanner = TextView(this).apply {
             text = hintText

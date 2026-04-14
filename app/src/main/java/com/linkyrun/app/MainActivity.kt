@@ -272,18 +272,7 @@ class MainActivity : AppCompatActivity() {
         loadingOverlay.visibility = View.VISIBLE
         thread {
             try {
-                val req = okhttp3.Request.Builder()
-                    .url("https://linkyrun.com/api/challenge/$code")
-                    .build()
-                val body = okhttp3.OkHttpClient().newCall(req).execute().body?.string() ?: return@thread
-                val j = org.json.JSONObject(body)
-                if (j.has("error")) return@thread
-                val info = ApiClient.GameInfo(
-                    start = j.getString("start"),
-                    goal = j.getString("goal"),
-                    difficulty = "custom",
-                    wiki = j.optString("wiki", "namu")
-                )
+                val info = ApiClient.getChallenge(code) ?: return@thread
                 runOnUiThread {
                     loadingOverlay.visibility = View.GONE
                     launchGame(info)

@@ -7,6 +7,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
+// TODO: 모든 네트워크 호출을 Kotlin 코루틴(suspend fun) 또는 OkHttp enqueue()로
+//       비동기 전환 권장. 현재는 thread { } 블록 내에서 동기 호출 중.
 object ApiClient {
 
     private const val BASE_URL = "https://linkyrun.com"
@@ -173,6 +175,26 @@ object ApiClient {
             }
         } catch (e: Exception) {
             emptyList()
+        }
+    }
+
+    /** GET /api/challenge/<code> — 도전장 코드로 게임 정보 조회 */
+    fun getChallenge(code: String): GameInfo? {
+        return try {
+            val req = Request.Builder()
+                .url("$BASE_URL/api/challenge/$code")
+                .build()
+            val body = client.newCall(req).execute().body?.string() ?: return null
+            val j = JSONObject(body)
+            if (j.has("error")) return null
+            GameInfo(
+                start = j.getString("start"),
+                goal = j.getString("goal"),
+                difficulty = "custom",
+                wiki = j.optString("wiki", "namu")
+            )
+        } catch (e: Exception) {
+            null
         }
     }
 }
